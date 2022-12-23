@@ -2,13 +2,12 @@ const {
 	Instruction,
 	Chunk
 } = require('./structs.js');
+const {
+	conditionalJumpOps
+} = require('./utils.js');	
 
 const prefixOps = [0xF0, 0xF2, 0xF3, 0x66, 0x67, 0x26, 0x2E, 0x36, 0x3E, 0x64, 0x65];
-const conditionalJumpOps = [
-	"JA", "JAE", "JB", "JBE", "JC", "JCXZ", "JECXZ", "JE", "JG", "JGE", "JL", "JLE", 
-	"JNA", "JNAE", "JNB", "JNBE", "JNC", "JNE", "JNG", "JNGE", "JNL", "JNLE", "JNO", 
-	"JNP", "JNS", "JNZ", "JO", "JP", "JPE", "JPO", "JS", "JZ"
-];
+
 const OPCODE_EXTENSION = 0x0F;
 
 const ReadModRM = (buf, addr) => {

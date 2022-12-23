@@ -1,5 +1,6 @@
 const fs = require('fs').promises;
 const parser = require('./jsprog/loader/parser.js');
+const emitter = require('./jsprog/loader/emit.js');
 
 
 async function processor(file) {
@@ -15,6 +16,9 @@ async function processor(file) {
 	for (const chunk of codeChunkSet) {
 		await fs.writeFile(`./chunks/${file}@${imageMajorVersion}.${imageMinorVersion}/chunks.1.${chunk.name}`, JSON.stringify(chunk, null, 4));
 	}
+	
+	const wasmBytes = await emitter.	assemble(codeChunkSet[codeChunkSet.length - 1]);
+	console.log(wasmBytes);
 }
 
 processor('./hw2.exe');

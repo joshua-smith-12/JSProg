@@ -9,6 +9,13 @@ function getNullTerminatedString(buffer, address) {
 	return str;
 }
 
+const conditionalJumpOps = [
+	"JA", "JAE", "JB", "JBE", "JC", "JCXZ", "JECXZ", "JE", "JG", "JGE", "JL", "JLE", 
+	"JNA", "JNAE", "JNB", "JNBE", "JNC", "JNE", "JNG", "JNGE", "JNL", "JNLE", "JNO", 
+	"JNP", "JNS", "JNZ", "JO", "JP", "JPE", "JPO", "JS", "JZ"
+];
+
 module.exports = {
-	getNullTerminatedString
+	getNullTerminatedString,
+	conditionalJumpOps
 };
