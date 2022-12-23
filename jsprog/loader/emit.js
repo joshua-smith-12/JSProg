@@ -158,13 +158,28 @@ async function assemble(chunk) {
     
     chunkBuffer.push(0x02);
     chunkBuffer.push(0x00);
-    chunkBuffer.push(importList.length); // import count
+    
+    const preImportSize = chunkBuffer.length;
+    chunkBuffer.push(importList.length + 1); // import count +1 for Memory
+    
+    // memory import
+    const memModuleName = Buffer.from("js");
+    const memImportName = Buffer.from("mem");
+    chunkBuffer.push(memModuleName.length); // length
+    for (const b of memModuleName) chunkBuffer.push(b);
+    chunkBuffer.push(memImportName.length);
+    for (const b of memImportName) chunkBuffer.push(b);
+    
+    chunkBuffer.push(0x02); // type (memory)
+    chunkBuffer.push(0x00); // flags
+    chunkBuffer.push(0x01); // initial size
+    
+    // function imports
     for (const imp of importList) {
         const moduleName = Buffer.from(imp.split("::")[0]);
         const importName = Buffer.from(imp.split("::")[1]);
         chunkBuffer.push(moduleName.length);
         for (const b of moduleName) chunkBuffer.push(b);
-        
         chunkBuffer.push(importName.length);
         for (const b of importName) chunkBuffer.push(b);
         
@@ -172,12 +187,35 @@ async function assemble(chunk) {
         chunkBuffer.push(0x00); // function signature type index
     }
     
+    chunkBuffer.push(chunkBuffer.length - preImportSize); // fixup size
+    
     // section Function (0x03)
+    chunkBuffer.push(0x03);
+    chunkBuffer.push(0x00);
+    chunkBuffer.push(0x01); // one function
+    chunkBuffer.push(0x00); // function signature type index
+    chunkBuffer.push(0x02); // fixup size
     
     // section Export (0x07)
+    chunkBuffer.push(0x07);
+    chunkBuffer.push(0x00);
+    chunkBuffer.push(0x01); // one export
+    const exportString = Buffer.from("defaultExport");
+    chunkBuffer.push(exportString.length);
+    for (const b of exportString) chunkBuffer.push(b);
+    chunkBuffer.push(0x00); // export type
+    chunkBuffer.push(importList.length); // function index
+    chunkBuffer.push(4 + exportString.length); // fixup size
     
     // section Code (0x0A)
-    
+    chunkBuffer.push(0x0A);
+    chunkBuffer.push(0x00);
+    chunkBuffer.push(0x01); // function count
+    chunkBuffer.push(0x00);
+    chunkBuffer.push(0x00); // decl count
+    chunkBuffer.push(0x0B); // END
+    chunkBuffer.push(0x02); // fixup func size
+    chunkBuffer.push(0x04);
     
     
     return chunkBuffer;
