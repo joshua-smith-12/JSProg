@@ -149,16 +149,28 @@ async function assemble(chunk) {
     // count the number of unique imports (each import is either EXTERN for a function import, or a JMP/CALL with a chunk ID other than -1)
     const importList = [];
     for (const instruction of chunk.instructions) {
-        if ((instruction.mnemonic === "JMP" || instruction.mnemonic === "CALL" || conditionalJumpOps.includes(instruction.mnemonic)) && instruction.operandSet[1].val !== -1 && !importList.includes(`${instruction.operandSet[0]}.${instruction.operandSet[1]}.${instruction.operandSet[2]}.chunk`)) {
-            importList.push(`${instruction.operandSet[0]}.${instruction.operandSet[1]}.${instruction.operandSet[2]}.chunk`);
+        if ((instruction.mnemonic === "JMP" || instruction.mnemonic === "CALL" || conditionalJumpOps.includes(instruction.mnemonic)) && instruction.operandSet[1].val !== -1 && !importList.includes(`chunk${instruction.operandSet[1]}::defaultExport`)) {
+            importList.push(`chunk${instruction.operandSet[1]}::defaultExport`);
         } else if (instruction.mnemonic === "EXTERN" && !importList.includes(instruction.operandSet[0].val)) {
             importList.push(instruction.operandSet[0].val);
         }
     }
-    console.log(importList);
+    
     chunkBuffer.push(0x02);
     chunkBuffer.push(0x00);
-    chunkBuffer.push(0x00); // import count TODO
+    chunkBuffer.push(importList.length); // import count
+    for (const imp of importList) {
+        const moduleName = new UInt8Array(imp.split("::")[0]);
+        const importName = new UInt8Array(imp.split("::")[1]);
+        chunkBuffer.push(moduleName.length);
+        for (const b of moduleName) chunkBuffer.push(b);
+        
+        chunkBuffer.push(importName.length);
+        for (const b of importName) chunkBuffer.push(b);
+        
+        chunkBuffer.push(0x00); // import type
+        chunkBuffer.push(0x00); // function signature type index
+    }
     
     // section Function (0x03)
     
@@ -170,3 +182,7 @@ async function assemble(chunk) {
     
     return chunkBuffer;
 }
+
+module.exports = {
+    assemble
+};

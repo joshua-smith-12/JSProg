@@ -17,7 +17,7 @@ async function processor(file) {
 		await fs.writeFile(`./chunks/${file}@${imageMajorVersion}.${imageMinorVersion}/chunks.1.${chunk.name}`, JSON.stringify(chunk, null, 4));
 	}
 	
-	const wasmBytes = await emitter.	assemble(codeChunkSet[codeChunkSet.length - 1]);
+	const wasmBytes = await emitter.assemble(codeChunkSet[codeChunkSet.length - 1]);
 	console.log(wasmBytes);
 }
 
