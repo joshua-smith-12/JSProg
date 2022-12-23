@@ -160,8 +160,8 @@ async function assemble(chunk) {
     chunkBuffer.push(0x00);
     chunkBuffer.push(importList.length); // import count
     for (const imp of importList) {
-        const moduleName = new Uint8Array(imp.split("::")[0]);
-        const importName = new Uint8Array(imp.split("::")[1]);
+        const moduleName = Buffer.from(imp.split("::")[0]);
+        const importName = Buffer.from(imp.split("::")[1]);
         chunkBuffer.push(moduleName.length);
         for (const b of moduleName) chunkBuffer.push(b);
         
