@@ -160,7 +160,7 @@ async function assemble(chunk) {
     chunkBuffer.push(0x00);
     
     const preImportSize = chunkBuffer.length;
-    chunkBuffer.push(importList.length + 1); // import count +1 for Memory
+    chunkBuffer.push(importList.length + 1 + 8); // import count +1 for Memory, +8 for registers
     
     // memory import
     const memModuleName = Buffer.from("js");
@@ -173,6 +173,21 @@ async function assemble(chunk) {
     chunkBuffer.push(0x02); // type (memory)
     chunkBuffer.push(0x00); // flags
     chunkBuffer.push(0x01); // initial size
+    
+    const registers = ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp"];
+    const regModuleName = Buffer.from("registers");
+    for (const register of registers) {
+        chunkBuffer.push(regModuleName.length); // length
+        for (const b of regModuleName) chunkBuffer.push(b);
+        
+        const regImportName = Buffer.from(register);
+        chunkBuffer.push(regImportName.length); // length
+        for (const b of regImportName) chunkBuffer.push(b);
+        
+        chunkBuffer.push(0x03); // global import
+        chunkBuffer.push(0x7F); // i32
+        chunkBuffer.push(0x01); // mut flag 
+    }
     
     // function imports
     for (const imp of importList) {
@@ -195,22 +210,6 @@ async function assemble(chunk) {
     chunkBuffer.push(0x01); // one function
     chunkBuffer.push(0x00); // function signature type index
     chunkBuffer.push(0x02); // fixup size
-    
-    // section Globals (0x06)
-    // registers are exposed as const globals
-    chunkBuffer.push(0x06);
-    chunkBuffer.push(0x00);
-    chunkBuffer.push(0x08); // number of globals
-    
-    for (let i = 0; i < 8; i++) {
-        chunkBuffer.push(0x7F); // i32
-        chunkBuffer.push(0x01); // mut flag
-        chunkBuffer.push(0x41); // i32.const
-        chunkBuffer.push(0x00); // initial value
-        chunkBuffer.push(0x0B); // end definition
-    }
-    
-    chunkBuffer.push(0x29); // fixup size
     
     // section Export (0x07)
     chunkBuffer.push(0x07);
