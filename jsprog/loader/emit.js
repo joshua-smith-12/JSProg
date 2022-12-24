@@ -196,6 +196,22 @@ async function assemble(chunk) {
     chunkBuffer.push(0x00); // function signature type index
     chunkBuffer.push(0x02); // fixup size
     
+    // section Globals (0x06)
+    // registers are exposed as const globals
+    chunkBuffer.push(0x06);
+    chunkBuffer.push(0x00);
+    chunkBuffer.push(0x08); // number of globals
+    
+    for (let i = 0; i < 8; i++) {
+        chunkBuffer.push(0x7F); // i32
+        chunkBuffer.push(0x01); // mut flag
+        chunkBuffer.push(0x41); // i32.const
+        chunkBuffer.push(0x00); // initial value
+        chunkBuffer.push(0x0B); // end definition
+    }
+    
+    chunkBuffer.push(0x29); // fixup size
+    
     // section Export (0x07)
     chunkBuffer.push(0x07);
     chunkBuffer.push(0x00);
@@ -217,6 +233,7 @@ async function assemble(chunk) {
     chunkBuffer.push(0x02); // fixup func size
     chunkBuffer.push(0x04);
     
+    console.log(chunk.name);
     
     return chunkBuffer;
 }
