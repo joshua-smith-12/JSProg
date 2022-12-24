@@ -119,6 +119,8 @@ chunks.1.FUN_0041132F
 0000032: 23                                        ; FIXUP section size
 */
 
+// 0061736d010000000100016000000402000a026a73036d656d0200010972656769737465727303656178037f010972656769737465727303656278037f010972656769737465727303656378037f010972656769737465727303656478037f010972656769737465727303657369037f010972656769737465727303656469037f010972656769737465727303656270037f010972656769737465727303657370037f010d7563727462617365642e646c6c0c5f776d616b65706174685f730000b003000100020700010d64656661756c744578706f72740001110a000100000b0204'
+
 async function assemble(chunk) {
     const chunkBuffer = [];
     
@@ -138,12 +140,11 @@ async function assemble(chunk) {
     // for our usage the Type section is used to define possible function signatures.
     // all functions in jsprog have no inputs and outputs (the memory is used directly)
     chunkBuffer.push(0x01);
-    chunkBuffer.push(0x00);
+    chunkBuffer.push(0x04); // section size
     chunkBuffer.push(0x01); // one signature
     chunkBuffer.push(0x60); // function code
     chunkBuffer.push(0x00); // 0 inputs
     chunkBuffer.push(0x00); // 0 outputs
-    chunkBuffer.push(0x04); // fixup size
     
     // section Import (0x02)
     // count the number of unique imports (each import is either EXTERN for a function import, or a JMP/CALL with a chunk ID other than -1)
@@ -202,35 +203,31 @@ async function assemble(chunk) {
         chunkBuffer.push(0x00); // function signature type index
     }
     
-    chunkBuffer.push(chunkBuffer.length - preImportSize); // fixup size
+    chunkBuffer[preImportSize - 1] = chunkBuffer.length - preImportSize; // fixup size
     
     // section Function (0x03)
     chunkBuffer.push(0x03);
-    chunkBuffer.push(0x00);
+    chunkBuffer.push(0x02);
     chunkBuffer.push(0x01); // one function
     chunkBuffer.push(0x00); // function signature type index
-    chunkBuffer.push(0x02); // fixup size
     
     // section Export (0x07)
     chunkBuffer.push(0x07);
-    chunkBuffer.push(0x00);
+    chunkBuffer.push(0x11);
     chunkBuffer.push(0x01); // one export
     const exportString = Buffer.from("defaultExport");
     chunkBuffer.push(exportString.length);
     for (const b of exportString) chunkBuffer.push(b);
     chunkBuffer.push(0x00); // export type
     chunkBuffer.push(importList.length); // function index
-    chunkBuffer.push(4 + exportString.length); // fixup size
     
     // section Code (0x0A)
     chunkBuffer.push(0x0A);
-    chunkBuffer.push(0x00);
+    chunkBuffer.push(0x04);
     chunkBuffer.push(0x01); // function count
     chunkBuffer.push(0x00);
     chunkBuffer.push(0x00); // decl count
     chunkBuffer.push(0x0B); // END
-    chunkBuffer.push(0x02); // fixup func size
-    chunkBuffer.push(0x04);
     
     console.log(chunk.name);
     
