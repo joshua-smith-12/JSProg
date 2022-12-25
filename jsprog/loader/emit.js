@@ -175,7 +175,7 @@ async function assemble(chunk) {
     
     for (const branchTarget of branchTargets) {
       chunkBuffer.push(0x02); // block
-      chunkBuffer.push(0x04); // void
+      chunkBuffer.push(0x40); // void
     }
     
     for (let i = 0; i < branchTargets.length; i++) {
