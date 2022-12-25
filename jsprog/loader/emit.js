@@ -204,6 +204,9 @@ async function assemble(chunk) {
     // close the root loop
     chunkBuffer.push(0x0B); // end
     
+    // close function body
+    chunkBuffer.push(0x0B); // end
+    
     // fix up the function size
     chunkBuffer[bodyLengthByte] = chunkBuffer.length - bodyLengthByte - 1;
     
