@@ -4,58 +4,29 @@ const {
 } = require('./utils.js');
 
 /*
-freebranch sample
-uses a link register plus a root loop.
+generated code uses a link register plus a root loop.
 to branch to a given jump location, set link and br to the root.
 this construct solves two problems:
 - difficult to jump to a position mid-chunk
 - difficult to jump backwards to arbitrary positions in a chunk
-the cost is efficiency as a decent number of opcodes are spent setting up blocks and branches  
-(module
-  (global $link (mut i32) (i32.const 0))
-  (func (export "addTwo") (local i32)
-    (loop $root
-      (block $b5
-        (block $b3
-          (block $b2
-            i32.const 2
-            global.get $link
-            i32.eq
-            br_if $b2
-            i32.const 3
-            global.get $link
-            i32.eq 
-            br_if $b3
-            i32.const 5
-            global.get $link
-            i32.eq
-            br_if $b5
-            ;; i1: ADD EAX, 1
-            local.get 0
-            i32.const 1
-            i32.add
-            local.set 0
-          )
-          ;; i2: MOV EAX, 5
-          i32.const 5
-          local.set 0
-        )
-        ;; i3: MOV EAX, 0
-        i32.const 0
-        local.set 0
-        ;; i4: JMP $b2
-        i32.const 2
-        global.set $link
-        br $root
-      )
-      ;; i5: MOV EAX, 1
-      i32.const 1
-      local.set 0
-    )
-  )
-)
+the cost is efficiency as a decent number of opcodes are spent setting up blocks and branches
+there are options for microoptimizations. one already implemented is to place the branch to the first instruction first in the branch list.
+it might be possible to use br_table for this with some additional work.
 */
 const registers = ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp", "link"];
+
+async function assembleInstruction(instruction, buffer, imports) {
+    if (instruction.mnemonic === "EXTERN") {
+        buffer.push(0x10); // call
+        
+        // find the function index
+        const index = imports.findIndex(x => x === instruction.operandSet[0].val);
+        if (index === -1) return false;
+        
+        buffer.push(index); // index
+    }
+    return true;
+}
 
 async function assemble(chunk) {
     const chunkBuffer = [];
@@ -174,31 +145,37 @@ async function assemble(chunk) {
     const branchTargets = chunk.branchTargets.sort();
     
     for (const branchTarget of branchTargets) {
-      chunkBuffer.push(0x02); // block
-      chunkBuffer.push(0x40); // void
+        chunkBuffer.push(0x02); // block
+        chunkBuffer.push(0x40); // void
     }
     
     for (let i = 0; i < branchTargets.length; i++) {
-      const branchTarget = branchTargets[i];
-      chunkBuffer.push(0x41); // i32.const
-      // const value
-      const instructionId = [...Buffer.from(toBytesInt32(branchTarget))];
-      while (instructionId[0] == 0x00 && instructionId.length > 1) instructionId.shift();
-      for (const b of instructionId) chunkBuffer.push(b);
+        const branchTarget = branchTargets[i];
+        chunkBuffer.push(0x41); // i32.const
+        // const value
+        const instructionId = [...Buffer.from(toBytesInt32(branchTarget))];
+        while (instructionId[0] == 0x00 && instructionId.length > 1) instructionId.shift();
+        for (const b of instructionId) chunkBuffer.push(b);
       
-      chunkBuffer.push(0x23); // global.get
-      chunkBuffer.push(registers.indexOf("link")); // global index
+        chunkBuffer.push(0x23); // global.get
+        chunkBuffer.push(registers.indexOf("link")); // global index
       
-      chunkBuffer.push(0x46); // i32.eq
-      chunkBuffer.push(0x0D); // br_if
-      chunkBuffer.push(i); // break depth
+        chunkBuffer.push(0x46); // i32.eq
+        chunkBuffer.push(0x0D); // br_if
+        chunkBuffer.push(i); // break depth
     }
     
-    for (let i = 0; i < branchTargets.length; i++) {
-      // close block if this is a branch target
-      if (branchTargets.includes(i)) {
-        chunkBuffer.push(0x0B); // end
-      }
+    for (let i = 0; i < chunk.instructions.length; i++) {
+        const instruction = chunk.instructions[i];
+    
+        // close block if this is a branch target
+        if (branchTargets.includes(i)) {
+            chunkBuffer.push(0x0B); // end
+        }
+      
+        // process the instruction
+        const res = await assembleInstruction(instruction, chunkBuffer, importList);
+        if (!res) return false;
     }
     
     // close the root loop
