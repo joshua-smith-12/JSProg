@@ -17,7 +17,7 @@ const registers = ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp", "link
 
 async function assembleInstruction(instruction, buffer, imports, targets, instrIndex) {
     switch (instruction.mnemonic) {
-        case "EXTERN":
+        case "EXTERN": {
             buffer.push(0x10); // call
         
             // find the function index
@@ -26,7 +26,8 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
         
             buffer.push(index); // index
             break;
-        case "JMP":
+        } 
+        case "JMP": {
             // set link register
             buffer.push(0x41); // i32.const
             await addInstructionId(buffer, instruction.operandSet[2].val);
@@ -40,11 +41,12 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
         
             buffer.push(index); // index
             break;
-            
-        default:
+        }
+        default: {
             console.log("Failed to assemble WASM chunk, instruction has unknown mnemonic!");
             console.log(JSON.stringify(instruction));
             return false; 
+        } 
     }
     return true;
 }
