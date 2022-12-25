@@ -55,6 +55,7 @@ the cost is efficiency as a decent number of opcodes are spent setting up blocks
   )
 )
 */
+const registers = ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp", "link"];
 
 async function assemble(chunk) {
     const chunkBuffer = [];
@@ -98,7 +99,7 @@ async function assemble(chunk) {
     chunkBuffer.push(0x01); // todo: understand this
     
     const preImportSize = chunkBuffer.length;
-    chunkBuffer.push(importList.length + 1 + 8); // import count +1 for Memory, +8 for registers
+    chunkBuffer.push(importList.length + 1 + registers.length); // import count +1 for Memory, +x for registers
     
     // memory import
     const memModuleName = Buffer.from("js");
@@ -112,7 +113,6 @@ async function assemble(chunk) {
     chunkBuffer.push(0x00); // flags
     chunkBuffer.push(0x01); // initial size
     
-    const registers = ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp", "link"];
     const regModuleName = Buffer.from("registers");
     for (const register of registers) {
         chunkBuffer.push(regModuleName.length); // length
@@ -182,8 +182,8 @@ async function assemble(chunk) {
       const branchTarget = branchTargets[i];
       chunkBuffer.push(0x41); // i32.const
       // const value
-      const instructionId = toBytesInt32(branchTarget);
-      while (instructionId[0] == 0x00) instructionId.shift();
+      const instructionId = [...Buffer.from(toBytesInt32(branchTarget))];
+      while (instructionId[0] == 0x00 && instructionId.length > 1) instructionId.shift();
       for (const b of instructionId) chunkBuffer.push(b);
       
       chunkBuffer.push(0x23); // global.get
