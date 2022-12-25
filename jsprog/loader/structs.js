@@ -7,7 +7,7 @@ const ImportHint = NamedStruct('ImportHint', 'index', 'name', 'thunk');
 const DllImportDefinition = NamedStruct('DllImportDefinition', 'name', 'allImports');
 
 const Instruction = NamedStruct('Instruction', 'prefixSet', 'opcode', 'operandSet', 'address', 'next', 'mnemonic');
-const Chunk = NamedStruct('Chunk', 'name', 'instructions', 'ranges');
+const Chunk = NamedStruct('Chunk', 'name', 'instructions', 'ranges', 'branchTargets');
  
 module.exports = {
 	DataDirectory,

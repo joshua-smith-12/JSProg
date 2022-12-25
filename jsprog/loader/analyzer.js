@@ -2675,7 +2675,7 @@ module.exports = {
 					if (!chunkRanges.includes(x)) chunkRanges.push(x);
 				}
 				// store the current chunk
-				const chunkFinal = Chunk(currChunk.chunkName, currChunk.chunkData, currChunk.chunkRanges);
+				const chunkFinal = Chunk(currChunk.chunkName, currChunk.chunkData, currChunk.chunkRanges, []);
 				allChunks.push(chunkFinal);
 				
 				console.log(`Processed new chunk ${currChunk.chunkName}`);
@@ -2696,6 +2696,7 @@ module.exports = {
 	FixupChunkReferences: async function(chunks, thunkFixup, thunkMax, importList, buf) {
 		// iterate all chunks in order to fixup references to addresses
 		// (in e.g. JMP, CALL, etc...)
+		// this also generates a list of branch targets per chunk
 		for (var chunk of chunks) {
 			for (var instruction of chunk.instructions) {
 				// instructions to fixup
@@ -2763,6 +2764,7 @@ module.exports = {
 									size: 32
 								},
 							];
+							if (!chunk.branchTargets.includes(instructionTarget)) chunk.branchTargets.push(instructionTarget);
 						} else {
 							// identify the chunk containing this target
 							const targetChunk = chunks.filter(x => x.ranges.some(y => y.chunkRangeStart <= target && y.chunkRangeEnd > target));
@@ -2798,6 +2800,7 @@ module.exports = {
 										size: 32
 									},
 								];
+								if (!targetChunk.branchTargets.includes(instructionTarget)) targetChunk.branchTargets.push(instructionTarget);
 							} else {
 								console.log(`No instruction exists in chosen chunk to satisfy relocation to 0x${(target + fixup).toString(16).toUpperCase()}`);
 								return;
