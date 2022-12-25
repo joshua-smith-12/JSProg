@@ -15,7 +15,7 @@ it might be possible to use br_table for this with some additional work.
 */
 const registers = ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp", "link"];
 
-async function assembleInstruction(instruction, buffer, imports) {
+async function assembleInstruction(instruction, buffer, imports, targets, instrIndex) {
     switch (instruction.mnemonic) {
         case "EXTERN":
             buffer.push(0x10); // call
@@ -26,6 +26,21 @@ async function assembleInstruction(instruction, buffer, imports) {
         
             buffer.push(index); // index
             break;
+        case "JMP":
+            // set link register
+            buffer.push(0x41); // i32.const
+            await addInstructionId(buffer, instruction.operandSet[2].val);
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("link"));
+            
+            // call function
+            buffer.push(0x10);
+            const index = imports.findIndex(x => x === `chunk${instruction.operandSet[1]}::defaultExport`);
+            if (index === -1) return false;
+        
+            buffer.push(index); // index
+            break;
+            
         default:
             console.log("Failed to assemble WASM chunk, instruction has unknown mnemonic!");
             console.log(JSON.stringify(instruction));
@@ -33,6 +48,12 @@ async function assembleInstruction(instruction, buffer, imports) {
     }
     return true;
 }
+
+async function addInstructionId(chunkBuffer, branchTarget) {
+    const instructionId = [...Buffer.from(toBytesInt32(branchTarget))];
+    while (instructionId[0] == 0x00 && instructionId.length > 1) instructionId.shift();
+    for (const b of instructionId) chunkBuffer.push(b);
+} 
 
 async function assemble(chunk) {
     const chunkBuffer = [];
@@ -159,9 +180,7 @@ async function assemble(chunk) {
         const branchTarget = branchTargets[i];
         chunkBuffer.push(0x41); // i32.const
         // const value
-        const instructionId = [...Buffer.from(toBytesInt32(branchTarget))];
-        while (instructionId[0] == 0x00 && instructionId.length > 1) instructionId.shift();
-        for (const b of instructionId) chunkBuffer.push(b);
+        await addInstructionId(chunkBuffer, branchTarget);
       
         chunkBuffer.push(0x23); // global.get
         chunkBuffer.push(registers.indexOf("link")); // global index
@@ -180,7 +199,7 @@ async function assemble(chunk) {
         }
       
         // process the instruction
-        const res = await assembleInstruction(instruction, chunkBuffer, importList);
+        const res = await assembleInstruction(instruction, chunkBuffer, importList, branchTargets, i);
         if (!res) return false;
     }
     
