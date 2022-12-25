@@ -2697,7 +2697,7 @@ module.exports = {
 		// iterate all chunks in order to fixup references to addresses
 		// (in e.g. JMP, CALL, etc...)
 		// this also generates a list of branch targets per chunk
-		for (var chunk of chunks) {
+		for (var chunk of chunks) {	
 			for (var instruction of chunk.instructions) {
 				// instructions to fixup
 				if (instruction.mnemonic === "JMP" || instruction.mnemonic === "CALL" || conditionalJumpOps.includes(instruction.mnemonic)) {
@@ -2800,7 +2800,7 @@ module.exports = {
 										size: 32
 									},
 								];
-								if (!targetChunk.branchTargets.includes(instructionTarget)) targetChunk.branchTargets.push(instructionTarget);
+								if (!targetChunk[0].branchTargets.includes(instructionTarget)) targetChunk[0].branchTargets.push(instructionTarget);
 							} else {
 								console.log(`No instruction exists in chosen chunk to satisfy relocation to 0x${(target + fixup).toString(16).toUpperCase()}`);
 								return;
