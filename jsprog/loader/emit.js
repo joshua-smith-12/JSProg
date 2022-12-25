@@ -1,5 +1,6 @@
 const {
-	conditionalJumpOps
+	conditionalJumpOps,
+	toBytesInt32
 } = require('./utils.js');
 
 /*
@@ -111,7 +112,7 @@ async function assemble(chunk) {
     chunkBuffer.push(0x00); // flags
     chunkBuffer.push(0x01); // initial size
     
-    const registers = ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp"];
+    const registers = ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp", "link"];
     const regModuleName = Buffer.from("registers");
     for (const register of registers) {
         chunkBuffer.push(regModuleName.length); // length
@@ -159,13 +160,54 @@ async function assemble(chunk) {
     
     // section Code (0x0A)
     chunkBuffer.push(0x0A);
-    chunkBuffer.push(0x04);
+    chunkBuffer.push(0x00);
     chunkBuffer.push(0x01); // function count
-    chunkBuffer.push(0x02); // body length
-    chunkBuffer.push(0x00); // decl count
-    chunkBuffer.push(0x0B); // END
     
-    console.log(chunk.name);
+    const bodyLengthByte = chunkBuffer.length;
+    chunkBuffer.push(0x00); // body length
+    chunkBuffer.push(0x00); // local decl count
+    
+    // Handle the link-jump mechanism
+    chunkBuffer.push(0x03); // root loop
+    chunkBuffer.push(0x40); // void
+    
+    const branchTargets = chunk.branchTargets.sort();
+    
+    for (const branchTarget of branchTargets) {
+      chunkBuffer.push(0x02); // block
+      chunkBuffer.push(0x04); // void
+    }
+    
+    for (let i = 0; i < branchTargets.length; i++) {
+      const branchTarget = branchTargets[i];
+      chunkBuffer.push(0x41); // i32.const
+      // const value
+      const instructionId = toBytesInt32(branchTarget);
+      while (instructionId[0] == 0x00) instructionId.shift();
+      for (const b of instructionId) chunkBuffer.push(b);
+      
+      chunkBuffer.push(0x23); // global.get
+      chunkBuffer.push(registers.indexOf("link")); // global index
+      
+      chunkBuffer.push(0x46); // i32.eq
+      chunkBuffer.push(0x0D); // br_if
+      chunkBuffer.push(i); // break depth
+    }
+    
+    for (let i = 0; i < branchTargets.length; i++) {
+      // close block if this is a branch target
+      if (branchTargets.includes(i)) {
+        chunkBuffer.push(0x0B); // end
+      }
+    }
+    
+    // close the root loop
+    chunkBuffer.push(0x0B); // end
+    
+    // fix up the function size
+    chunkBuffer[bodyLengthByte] = chunkBuffer.length - bodyLengthByte;
+    
+    chunkBuffer[bodyLengthByte - 2] = chunkBuffer[bodyLengthByte] + 2;
     
     return chunkBuffer;
 }

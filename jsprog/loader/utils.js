@@ -9,6 +9,14 @@ function getNullTerminatedString(buffer, address) {
 	return str;
 }
 
+// https://stackoverflow.com/a/24947000
+function toBytesInt32 (num) {
+    const arr = new ArrayBuffer(4); // an Int32 takes 4 bytes
+    const view = new DataView(arr);
+    view.setUint32(0, num, false); // byteOffset = 0; litteEndian = false
+    return arr;
+}
+
 const conditionalJumpOps = [
 	"JA", "JAE", "JB", "JBE", "JC", "JCXZ", "JECXZ", "JE", "JG", "JGE", "JL", "JLE", 
 	"JNA", "JNAE", "JNB", "JNBE", "JNC", "JNE", "JNG", "JNGE", "JNL", "JNLE", "JNO", 
@@ -17,5 +25,6 @@ const conditionalJumpOps = [
 
 module.exports = {
 	getNullTerminatedString,
+	toBytesInt32,
 	conditionalJumpOps
 };
