@@ -16,14 +16,20 @@ it might be possible to use br_table for this with some additional work.
 const registers = ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp", "link"];
 
 async function assembleInstruction(instruction, buffer, imports) {
-    if (instruction.mnemonic === "EXTERN") {
-        buffer.push(0x10); // call
+    switch (instruction.mnemonic) {
+        case "EXTERN":
+            buffer.push(0x10); // call
         
-        // find the function index
-        const index = imports.findIndex(x => x === instruction.operandSet[0].val);
-        if (index === -1) return false;
+            // find the function index
+            const index = imports.findIndex(x => x === instruction.operandSet[0].val);
+            if (index === -1) return false;
         
-        buffer.push(index); // index
+            buffer.push(index); // index
+            break;
+        default:
+            console.log("Failed to assemble WASM chunk, instruction has unknown mnemonic!");
+            console.log(JSON.stringify(instruction));
+            return false; 
     }
     return true;
 }
