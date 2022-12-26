@@ -32,7 +32,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             break;
         } 
         case "JMP": {
-            if(instruction.operandSet[2].type === "imm") {
+            if(instruction.operandSet[2].type === "imm" && !instruction.operandSet[2].indirect) {
                 // set link register
                 buffer.push(0x41); // i32.const
                 await addInstructionId(buffer, instruction.operandSet[2].val);
@@ -56,10 +56,10 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(registers.indexOf("esp"));
                 
             // value to be pushed as a const
-            if (instruction.operandSet[0].type === 'imm') {
+            if (instruction.operandSet[0].type === 'imm' && !instruction.operandSet[0].indirect) {
                 buffer.push(0x41); // i32.const
                 await addInstructionId(buffer, instruction.operandSet[0].val);
-            } else if (instruction.operandSet[0].type === 'reg') {
+            } else if (instruction.operandSet[0].type === 'reg' && !instruction.operandSet[0].indirect) {
                 buffer.push(0x23); // global.get
                 buffer.push(instruction.operandSet[0].val);
             } else {
@@ -93,6 +93,28 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(registers.indexOf("esp"));
             break;
         } 
+        case "MOV": {
+            // put source value on stack
+            if (instruction.operandSet[1].type === 'imm' && !instruction.operandSet[1].indirect) {
+                buffer.push(0x41); // i32.const
+                await addInstructionId(buffer, instruction.operandSet[1].val);
+            } else if (instruction.operandSet[1].type === 'reg' && !instruction.operandSet[1].indirect) {
+                buffer.push(0x23); // global.get
+                buffer.push(instruction.operandSet[1].val);
+            } else {
+                console.log("Unknown operand type for push instruction!");
+                return false;
+            }
+            
+            // apply to destination
+            if (instruction.operandSet[0].type === 'imm' && !instruction.operandSet[0].indirect)
+            {
+                buffer.push(0x24); // global.set
+                buffer.push(instruction.operandSet[0].val);
+            }
+            
+            break;
+        }
         default: {
             console.log("Failed to assemble WASM chunk, instruction has unknown mnemonic!");
             return false; 
