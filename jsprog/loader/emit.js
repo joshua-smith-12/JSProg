@@ -13,7 +13,124 @@ the cost is efficiency as a decent number of opcodes are spent setting up blocks
 there are options for microoptimizations. one already implemented is to place the branch to the first instruction first in the branch list.
 it might be possible to use br_table for this with some additional work.
 */
-const registers = ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi", "link"];
+const registers = ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi", "link", "t1"];
+
+// takes an operand (imm or reg) and places the value on the WASM stack.
+function operandToStack(operand, buffer) {
+    if (operand.type === "imm") {
+        if (operand.indirect) {
+            buffer.push(0x41); // i32.const
+            await addInstructionId(buffer, operand.val);
+            if (operand.size === 32) {
+                buffer.push(0x28); // i32.load
+            } else if (operand.size === 16) {
+                buffer.push(0x2F); // i32.load16_u
+            } else if (operand.size === 8) {
+                buffer.push(0x2D); // i32.load8_u
+            } else {
+                console.log("Unknown operand size to be placed on stack!");
+                return false;
+            }
+        } else {
+            buffer.push(0x41); // i32.const
+            await addInstructionId(buffer, operand.val);
+        }
+    } else if (operand.type === "reg") {
+        if (operand.indirect) {
+            buffer.push(0x23); // global.get
+            buffer.push(operand.val);
+            
+            // load value of pointer
+            if (operand.size === 32) {
+                buffer.push(0x28); // i32.load
+            } else if (operand.size === 16) {
+                buffer.push(0x2F); // i32.load16_u
+            } else if (operand.size === 8) {
+                buffer.push(0x2D); // i32.load8_u
+            } else {
+                console.log("Unknown operand size to be placed on stack!");
+                return false;
+            }
+        } else {
+            buffer.push(0x23); // global.get
+            buffer.push(operand.val);
+        }
+    } else {
+        console.log("Unknown operand type to be placed on stack!");
+        return false;
+    }
+    
+    return true;
+}
+
+// assuming a value exists on the WASM stack, moves this value into an operand.
+function stackToOperand(operand, buffer) {
+    if (operand.type === "imm") {
+        if (operand.indirect) {
+            // read the value into temp register
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("t1"));
+            
+            // set the address to write to
+            buffer.push(0x41); // i32.const
+            await addInstructionId(buffer, operand.val);
+            
+            // restore value onto stack
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1"));
+            
+            // store
+            if (operand.size === 32) {
+                buffer.push(0x36); // i32.store
+                buffer.push(0x02); // alignment
+            } else if (operand.size === 16) {
+                buffer.push(0x3A); // i32.store16
+                buffer.push(0x01); // alignment
+            } else if (operand.size === 8) {
+                buffer.push(0x3B); // i32.store8
+                buffer.push(0x00); // alignment
+            } else {
+                console.log("Unknown operand size for store!");
+            }
+            buffer.push(0x00); // offset
+        } else {
+            console.log("Cannot store value in a direct immediate.");
+            return false;
+        }
+    } else if (operand.type === "reg") {
+        if (operand.indirect) {
+            // load value of pointer
+            if (operand.size === 32) {
+                buffer.push(0x28); // i32.load
+            } else if (operand.size === 16) {
+                buffer.push(0x2F); // i32.load16_u
+            } else if (operand.size === 8) {
+                buffer.push(0x2D); // i32.load8_u
+            } else {
+                console.log("Unknown operand size to be loaded from stack!");
+                return false;
+            }
+            
+            buffer.push(0x24); // global.set
+            buffer.push(operand.val);
+        } else {
+            buffer.push(0x24); // global.set
+            buffer.push(operand.val);
+        }
+    } else {
+        console.log("Unknown operand type to be placed on stack!");
+        return false;
+    }
+    
+    return true;
+}
+
+function setLinkRegister(buffer, target) {
+    buffer.push(0x41); // i32.const
+    await addInstructionId(buffer, target);
+    buffer.push(0x24); // global.set
+    buffer.push(registers.indexOf("link"));
+}
 
 async function assembleInstruction(instruction, buffer, imports, targets, instrIndex) {
     switch (instruction.mnemonic) {
@@ -30,14 +147,11 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
         
             buffer.push(index); // index
             break;
-        } 
+        }
         case "JMP": {
             if(instruction.operandSet[2].type === "imm" && !instruction.operandSet[2].indirect) {
                 // set link register
-                buffer.push(0x41); // i32.const
-                await addInstructionId(buffer, instruction.operandSet[2].val);
-                buffer.push(0x24); // global.set
-                                buffer.push(registers.indexOf("link"));
+                setLinkRegister(buffer, instruction.operandSet[2].val);
             
                 // call function
                 buffer.push(0x10); // call
@@ -56,32 +170,10 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(registers.indexOf("esp"));
                 
             // value to be pushed as a const
-            if (instruction.operandSet[0].type === 'imm' && !instruction.operandSet[0].indirect) {
-                buffer.push(0x41); // i32.const
-                await addInstructionId(buffer, instruction.operandSet[0].val);
-            } else if (instruction.operandSet[0].type === 'reg' && !instruction.operandSet[0].indirect) {
-                buffer.push(0x23); // global.get
-                buffer.push(instruction.operandSet[0].val);
-            } else {
-                console.log("Unknown operand type for push instruction!");
-                return false;
-            }
+            if (!operandToStack(instruction.operandSet[0], buffer)) return false;
                 
             // stores value at [esp]
-            if (instruction.operandSet[0].size === 32) {
-                buffer.push(0x36); // i32.store
-                buffer.push(0x02); // alignment
-            } else if (instruction.operandSet[0].size === 16) {
-                buffer.push(0x3A); // i32.store
-                buffer.push(0x01); // alignment
-            } else if (instruction.operandSet[0].size === 8) {
-                buffer.push(0x3B); // i32.store
-                buffer.push(0x00); // alignment
-            } else {
-                console.log("Unknown operand size for push!");
-            }
-                    
-            buffer.push(0x00); // offset 
+            if (!stackToOperand({type: "reg", val: registers.indexOf("esp"), size: instruction.operandSet[0].size, indirect: true})) return false;
                 
             // shift ESP based on the operand size
             buffer.push(0x23); // global.get
@@ -95,23 +187,10 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
         } 
         case "MOV": {
             // put source value on stack
-            if (instruction.operandSet[1].type === 'imm' && !instruction.operandSet[1].indirect) {
-                buffer.push(0x41); // i32.const
-                await addInstructionId(buffer, instruction.operandSet[1].val);
-            } else if (instruction.operandSet[1].type === 'reg' && !instruction.operandSet[1].indirect) {
-                buffer.push(0x23); // global.get
-                buffer.push(instruction.operandSet[1].val);
-            } else {
-                console.log("Unknown operand type for push instruction!");
-                return false;
-            }
+            if (!operandToStack(instruction.operandSet[1], buffer)) return false;
             
-            // apply to destination
-            if (instruction.operandSet[0].type === 'imm' && !instruction.operandSet[0].indirect)
-            {
-                buffer.push(0x24); // global.set
-                buffer.push(instruction.operandSet[0].val);
-            }
+            // copy to the destination operand
+            if (!stackToOperand(instruction.operandSet[0], buffer)) return false;
             
             break;
         }
