@@ -86,11 +86,12 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
                 buffer.push(registers.indexOf("esp"));
             } else {
                 console.log("Non-immediate push targets are not yet supported.");
+                return false;
             }
+            break;
         } 
         default: {
             console.log("Failed to assemble WASM chunk, instruction has unknown mnemonic!");
-            console.log(JSON.stringify(instruction));
             return false; 
         } 
     }
@@ -248,7 +249,10 @@ async function assemble(chunk) {
       
         // process the instruction
         const res = await assembleInstruction(instruction, chunkBuffer, importList, branchTargets, i);
-        if (!res) return false;
+        if (!res) {
+            console.log(JSON.stringify(instruction));
+            return false;
+        } 
     }
     
     // close the root loop
