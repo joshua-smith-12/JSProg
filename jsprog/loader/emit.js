@@ -20,7 +20,7 @@ function operandToStack(operand, buffer) {
     if (operand.type === "imm") {
         if (operand.indirect) {
             buffer.push(0x41); // i32.const
-            await addInstructionId(buffer, operand.val);
+            putConstOnBuffer(buffer, operand.val);
             if (operand.size === 32) {
                 buffer.push(0x28); // i32.load
             } else if (operand.size === 16) {
@@ -33,7 +33,7 @@ function operandToStack(operand, buffer) {
             }
         } else {
             buffer.push(0x41); // i32.const
-            await addInstructionId(buffer, operand.val);
+            putConstOnBuffer(buffer, operand.val);
         }
     } else if (operand.type === "reg") {
         if (operand.indirect) {
@@ -73,7 +73,7 @@ function stackToOperand(operand, buffer) {
             
             // set the address to write to
             buffer.push(0x41); // i32.const
-            await addInstructionId(buffer, operand.val);
+            putConstOnBuffer(buffer, operand.val);
             
             // restore value onto stack
             buffer.push(0x23); // global.get
@@ -127,7 +127,7 @@ function stackToOperand(operand, buffer) {
 
 function setLinkRegister(buffer, target) {
     buffer.push(0x41); // i32.const
-    await addInstructionId(buffer, target);
+    putConstOnBuffer(buffer, target);
     buffer.push(0x24); // global.set
     buffer.push(registers.indexOf("link"));
 }
@@ -202,10 +202,10 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
     return true;
 }
 
-async function addInstructionId(chunkBuffer, branchTarget) {
-    const instructionId = [...Buffer.from(toBytesInt32(branchTarget))];
-    while (instructionId[0] == 0x00 && instructionId.length > 1) instructionId.shift();
-    for (const b of instructionId) chunkBuffer.push(b);
+function putConstOnBuffer(chunkBuffer, constValue) {
+    const byteValue = [...Buffer.from(toBytesInt32(constValue))];
+    while (byteValue[0] == 0x00 && byteValue.length > 1) byteValue.shift();
+    for (const b of byteValue) chunkBuffer.push(b);
 } 
 
 async function assemble(chunk) {
@@ -333,7 +333,7 @@ async function assemble(chunk) {
         const branchTarget = branchTargets[i];
         chunkBuffer.push(0x41); // i32.const
         // const value
-        await addInstructionId(chunkBuffer, branchTarget);
+        putConstOnBuffer(chunkBuffer, branchTarget);
       
         chunkBuffer.push(0x23); // global.get
         chunkBuffer.push(registers.indexOf("link")); // global index
