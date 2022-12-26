@@ -227,6 +227,10 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(0x24); // global.set
             break;
         }
+        case "RET": {
+            buffer.push(0x0F);
+            break;
+        }  
         default: {
             console.log("Failed to assemble WASM chunk, instruction has unknown mnemonic!");
             return false; 
