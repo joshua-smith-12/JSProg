@@ -15,22 +15,49 @@ it might be possible to use br_table for this with some additional work.
 */
 const registers = ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi", "link", "t1"];
 
+function sizedLoad(buffer, size) {
+    if (size === 32) {
+        buffer.push(0x28); // i32.load
+        buffer.push(0x02); // alignment
+    } else if (size === 16) {
+        buffer.push(0x2F); // i32.load16_u
+        buffer.push(0x01); // alignment
+    } else if (size === 8) {
+        buffer.push(0x2D); // i32.load8_u
+        buffer.push(0x00); // alignment
+    } else {
+        console.log("Unknown operand size for sized load!");
+        return false;
+    }
+    buffer.push(0x00); // offset
+    return true;
+}
+
+function sizedStore(buffer, size) {
+    if (size === 32) {
+        buffer.push(0x36); // i32.store
+        buffer.push(0x02); // alignment
+    } else if (size === 16) {
+        buffer.push(0x3A); // i32.store16
+        buffer.push(0x01); // alignment
+    } else if (size === 8) {
+        buffer.push(0x3B); // i32.store8
+        buffer.push(0x00); // alignment
+    } else {
+        console.log("Unknown operand size for sized store!");
+        return false;
+    }
+    buffer.push(0x00); // offset
+    return true;
+}
+
 // takes an operand (imm or reg) and places the value on the WASM stack.
 function operandToStack(operand, buffer) {
     if (operand.type === "imm") {
         if (operand.indirect) {
             buffer.push(0x41); // i32.const
             putConstOnBuffer(buffer, operand.val);
-            if (operand.size === 32) {
-                buffer.push(0x28); // i32.load
-            } else if (operand.size === 16) {
-                buffer.push(0x2F); // i32.load16_u
-            } else if (operand.size === 8) {
-                buffer.push(0x2D); // i32.load8_u
-            } else {
-                console.log("Unknown operand size to be placed on stack!");
-                return false;
-            }
+            
         } else {
             buffer.push(0x41); // i32.const
             putConstOnBuffer(buffer, operand.val);
@@ -40,17 +67,7 @@ function operandToStack(operand, buffer) {
             buffer.push(0x23); // global.get
             buffer.push(operand.val);
             
-            // load value of pointer
-            if (operand.size === 32) {
-                buffer.push(0x28); // i32.load
-            } else if (operand.size === 16) {
-                buffer.push(0x2F); // i32.load16_u
-            } else if (operand.size === 8) {
-                buffer.push(0x2D); // i32.load8_u
-            } else {
-                console.log("Unknown operand size to be placed on stack!");
-                return false;
-            }
+            if (!sizedLoad(buffer, operand.size)) return false;
         } else {
             buffer.push(0x23); // global.get
             buffer.push(operand.val);
@@ -80,19 +97,7 @@ function stackToOperand(operand, buffer) {
             buffer.push(registers.indexOf("t1"));
             
             // store
-            if (operand.size === 32) {
-                buffer.push(0x36); // i32.store
-                buffer.push(0x02); // alignment
-            } else if (operand.size === 16) {
-                buffer.push(0x3A); // i32.store16
-                buffer.push(0x01); // alignment
-            } else if (operand.size === 8) {
-                buffer.push(0x3B); // i32.store8
-                buffer.push(0x00); // alignment
-            } else {
-                console.log("Unknown operand size for store!");
-            }
-            buffer.push(0x00); // offset
+            if (!sizedStore(buffer, operand.size)) return false;
         } else {
             console.log("Cannot store value in a direct immediate.");
             return false;
@@ -100,16 +105,7 @@ function stackToOperand(operand, buffer) {
     } else if (operand.type === "reg") {
         if (operand.indirect) {
             // load value of pointer
-            if (operand.size === 32) {
-                buffer.push(0x28); // i32.load
-            } else if (operand.size === 16) {
-                buffer.push(0x2F); // i32.load16_u
-            } else if (operand.size === 8) {
-                buffer.push(0x2D); // i32.load8_u
-            } else {
-                console.log("Unknown operand size to be loaded from stack!");
-                return false;
-            }
+            if (!sizedLoad(buffer, operand.size)) return false;
             
             buffer.push(0x24); // global.set
             buffer.push(operand.val);
