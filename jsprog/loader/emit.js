@@ -104,11 +104,20 @@ function stackToOperand(operand, buffer) {
         }
     } else if (operand.type === "reg") {
         if (operand.indirect) {
-            // load value of pointer
-            if (!sizedLoad(buffer, operand.size)) return false;
-            
+            // read the value into temp register
             buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("t1"));
+            
+            // set the address to write to
+            buffer.push(0x23); // global.get
             buffer.push(operand.val);
+            
+            // restore value onto stack
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1"));
+            
+            // store
+            if (!sizedStore(buffer, operand.size)) return false;
         } else {
             buffer.push(0x24); // global.set
             buffer.push(operand.val);
@@ -178,11 +187,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             }
             break;
         }
-        case "PUSH": {
-            // read ESP
-            buffer.push(0x23); // global.get
-            buffer.push(registers.indexOf("esp"));
-                
+        case "PUSH": {    
             // value to be pushed as a const
             if (!operandToStack(instruction.operandSet[0], buffer)) return false;
                 
