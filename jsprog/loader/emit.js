@@ -148,6 +148,10 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(index); // index
             break;
         }
+        // CALL matches JMP in our implementation but requires a return address pushed
+        case "CALL": {
+            await assembleInstruction({mnemonic: "PUSH", operandSet: {type:'imm', val:0}});
+        } 
         case "JMP": {
             if(instruction.operandSet[2].type === "imm" && !instruction.operandSet[2].indirect) {
                 // set link register
