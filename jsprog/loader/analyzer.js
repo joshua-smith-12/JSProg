@@ -2559,6 +2559,7 @@ const ProcessChunk = async (buf, addr, chunkRanges, fixupAddress) => {
 	const chunkData = [];
 	const outstandingChunks = [];
 	const conditionalJumpTargets = [];
+	const externalChunks = [];
 	const addrStart = addr;
 	while (true) {
 		const instrStart = addr;
@@ -2636,7 +2637,13 @@ const ProcessChunk = async (buf, addr, chunkRanges, fixupAddress) => {
 		// handle CALL as an additional chunk to explore
 		if (operandName === "CALL") {
 			const callTarget = addr + operandSet[0].val;
-			if (!chunkRanges.some(x => x.chunkRangeStart <= callTarget && x.chunkRangeEnd >= callTarget) && !operandSet[0].indirect && operandSet[0].type !== 'reg') outstandingChunks.push(callTarget);
+			if (!chunkRanges.some(x => x.chunkRangeStart <= callTarget && x.chunkRangeEnd >= callTarget) && operandSet[0].type !== "reg") 
+			if (operandSet[0].indirect) {
+				// indirect chunks will generally be labels, and may be external to the primary code section
+				externalChunks.push(operandSet[0].val);
+			} else {
+				outstandingChunks.push(callTarget);
+			}	
 		}
 
 		// handle conditional JMPs as new locations in the current chunk
@@ -2649,14 +2656,15 @@ const ProcessChunk = async (buf, addr, chunkRanges, fixupAddress) => {
 		chunkName,
 		chunkData,
 		chunkRanges,
-		outstandingChunks
+		outstandingChunks,
+		externalChunks
 	};
 };
 
 module.exports = {
 	
 	ProcessAllChunks: async function(buf, entrypoint, formalEntryPoint) {
-		const newChunks = [], chunkRanges = [], allChunks = [];
+		const newChunks = [], chunkRanges = [], allChunks = [], externalChunks = [];
 		const fixupAddress = formalEntryPoint - entrypoint;
 		
 		let addr = entrypoint;
@@ -2669,6 +2677,10 @@ module.exports = {
 				// register the chunks still to be explored
 				for (var x of currChunk.outstandingChunks) {
 					if (!newChunks.includes(x)) newChunks.push(x);
+				}
+				// register external chunks which may be processed later
+				for (var x of currChunk.externalChunks) {
+					if (!externalChunks.includes(x)) externalChunks.push(x);
 				}
 				// register the chunk ranges associated with this chunk
 				for (var x of currChunk.chunkRanges) {
@@ -2689,6 +2701,8 @@ module.exports = {
 			// progress to the new chunk
 			addr = newChunks.shift();
 		}
+		
+		console.log(externalChunks);
 
 		return allChunks;
 	},
