@@ -221,6 +221,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(instruction.operandSet[0].size / -8);
             buffer.push(0x6A); // i32.add
             buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("esp"));
             break;
         }
         case "RET": {
