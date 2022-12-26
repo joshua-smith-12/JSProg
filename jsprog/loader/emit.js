@@ -18,6 +18,10 @@ const registers = ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp", "link
 async function assembleInstruction(instruction, buffer, imports, targets, instrIndex) {
     switch (instruction.mnemonic) {
         case "EXTERN": {
+            // we can skip setting link register as externs won't use it
+            // push 0x00 to the stack (return address, unused but still need to specify)
+            await assembleInstruction({mnemonic: "PUSH", operandSet: {type:'imm', val:0}});
+             
             buffer.push(0x10); // call
         
             // find the function index
@@ -28,20 +32,62 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             break;
         } 
         case "JMP": {
-            // set link register
-            buffer.push(0x41); // i32.const
-            await addInstructionId(buffer, instruction.operandSet[2].val);
-            buffer.push(0x24); // global.set
-            buffer.push(registers.indexOf("link"));
+            if(instruction.operandSet[2].type === "imm") {
+                // set link register
+                buffer.push(0x41); // i32.const
+                await addInstructionId(buffer, instruction.operandSet[2].val);
+                buffer.push(0x24); // global.set
+                                buffer.push(registers.indexOf("link"));
             
-            // call function
-            buffer.push(0x10);
-            const index = imports.findIndex(x => x === `chunk${instruction.operandSet[1].val}::defaultExport`);
-            if (index === -1) return false;
-        
-            buffer.push(index); // index
+                // call function
+                buffer.push(0x10); // call
+                const index = imports.findIndex(x => x === `chunk${instruction.operandSet[1].val}::defaultExport`);
+                if (index === -1) return false;
+                buffer.push(index);
+            } else {
+                console.log("Non-immediate jump targets are not yet supported.");
+                return false;
+            }
             break;
         }
+        case "PUSH": {
+            if(instruction.operandSet[0].type === "imm") {
+                // read ESP
+                buffer.push(0x23); // global.get
+                buffer.push(registers.indexOf("esp"));
+                
+                // value to be pushed as a const
+                buffer.push(0x41); // i32.const
+                await addInstructionId(buffer, instruction.operandSet[0].val);
+                
+                // stores value at [esp]
+                if (instruction.operandSet[0].size === 32) {
+                    buffer.push(0x36); // i32.store
+                    buffer.push(0x02); // alignment
+                } else if (instruction.operandSet[0].size === 16) {
+                    buffer.push(0x3A); // i32.store
+                    buffer.push(0x01); // alignment
+                } else if (instruction.operandSet[0].size === 8) {
+                    buffer.push(0x3B); // i32.store
+                    buffer.push(0x00); // alignment
+                } else {
+                    console.log("Unknown operand size for push!");
+                }
+                    
+                buffer.push(0x00); // offset 
+                
+                // shift ESP based on the operand size
+                buffer.push(0x23); // global.get
+                buffer.push(registers.indexOf("esp"));
+                buffer.push(0x41); // i32.const
+                buffer.push(instruction.operandSet[0].size / 8);
+                buffer.push(0x6A); // i32.add
+                buffer.push(0x24); // global.set
+                buffer.push(registers.indexOf("esp"));
+            } else {
+                console.log("Non-immediate push targets are not yet supported.");
+            }
+        } 
         default: {
             console.log("Failed to assemble WASM chunk, instruction has unknown mnemonic!");
             console.log(JSON.stringify(instruction));
