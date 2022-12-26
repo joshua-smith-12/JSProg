@@ -137,7 +137,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
         case "EXTERN": {
             // we can skip setting link register as externs won't use it
             // push 0x00 to the stack (return address, unused but still need to specify)
-            await assembleInstruction({mnemonic: "PUSH", operandSet: {type:'imm', val:0}});
+            await assembleInstruction({mnemonic: "PUSH", operandSet: {type:'imm', val:0}}, buffer, imports, targets, -1);
              
             buffer.push(0x10); // call
         
@@ -150,7 +150,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
         }
         // CALL matches JMP in our implementation but requires a return address pushed
         case "CALL": {
-            await assembleInstruction({mnemonic: "PUSH", operandSet: {type:'imm', val:0}});
+            await assembleInstruction({mnemonic: "PUSH", operandSet: {type:'imm', val:0}}, buffer, imports, targets, -1);
             if(instruction.operandSet[2].type === "imm" && !instruction.operandSet[2].indirect) {
                 // set link register
                 setLinkRegister(buffer, instruction.operandSet[2].val);
