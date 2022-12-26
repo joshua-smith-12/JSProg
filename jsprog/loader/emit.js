@@ -13,7 +13,7 @@ the cost is efficiency as a decent number of opcodes are spent setting up blocks
 there are options for microoptimizations. one already implemented is to place the branch to the first instruction first in the branch list.
 it might be possible to use br_table for this with some additional work.
 */
-const registers = ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp", "link"];
+const registers = ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi", "link"];
 
 async function assembleInstruction(instruction, buffer, imports, targets, instrIndex) {
     switch (instruction.mnemonic) {
@@ -51,43 +51,46 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             break;
         }
         case "PUSH": {
-            if(instruction.operandSet[0].type === "imm") {
-                // read ESP
-                buffer.push(0x23); // global.get
-                buffer.push(registers.indexOf("esp"));
+            // read ESP
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("esp"));
                 
-                // value to be pushed as a const
+            // value to be pushed as a const
+            if (instruction.operandSet[0].type === 'imm') {
                 buffer.push(0x41); // i32.const
                 await addInstructionId(buffer, instruction.operandSet[0].val);
-                
-                // stores value at [esp]
-                if (instruction.operandSet[0].size === 32) {
-                    buffer.push(0x36); // i32.store
-                    buffer.push(0x02); // alignment
-                } else if (instruction.operandSet[0].size === 16) {
-                    buffer.push(0x3A); // i32.store
-                    buffer.push(0x01); // alignment
-                } else if (instruction.operandSet[0].size === 8) {
-                    buffer.push(0x3B); // i32.store
-                    buffer.push(0x00); // alignment
-                } else {
-                    console.log("Unknown operand size for push!");
-                }
-                    
-                buffer.push(0x00); // offset 
-                
-                // shift ESP based on the operand size
+            } else if (instruction.operandSet[0].type === 'reg') {
                 buffer.push(0x23); // global.get
-                buffer.push(registers.indexOf("esp"));
-                buffer.push(0x41); // i32.const
-                buffer.push(instruction.operandSet[0].size / 8);
-                buffer.push(0x6A); // i32.add
-                buffer.push(0x24); // global.set
-                buffer.push(registers.indexOf("esp"));
+                buffer.push(instruction.operandSet[0].val);
             } else {
-                console.log("Non-immediate push targets are not yet supported.");
+                console.log("Unknown operand type for push instruction!");
                 return false;
             }
+                
+            // stores value at [esp]
+            if (instruction.operandSet[0].size === 32) {
+                buffer.push(0x36); // i32.store
+                buffer.push(0x02); // alignment
+            } else if (instruction.operandSet[0].size === 16) {
+                buffer.push(0x3A); // i32.store
+                buffer.push(0x01); // alignment
+            } else if (instruction.operandSet[0].size === 8) {
+                buffer.push(0x3B); // i32.store
+                buffer.push(0x00); // alignment
+            } else {
+                console.log("Unknown operand size for push!");
+            }
+                    
+            buffer.push(0x00); // offset 
+                
+            // shift ESP based on the operand size
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("esp"));
+            buffer.push(0x41); // i32.const
+            buffer.push(instruction.operandSet[0].size / 8);
+            buffer.push(0x6A); // i32.add
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("esp"));
             break;
         } 
         default: {
