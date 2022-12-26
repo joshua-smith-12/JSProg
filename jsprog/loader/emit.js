@@ -212,6 +212,21 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             
             break;
         }
+        case "POP": {
+            // read from [ESP]
+            if (!operandToStack({type: "reg", val: registers.indexOf("esp"), size: 32, indirect: true}, buffer)) return false;
+            // pop into the desired operand
+            if (!stackToOperand(instruction.operandSet[0], buffer)) return false;
+            
+            // shift ESP based on the operand size
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("esp"));
+            buffer.push(0x41); // i32.const
+            buffer.push(instruction.operandSet[0].size / -8);
+            buffer.push(0x6A); // i32.add
+            buffer.push(0x24); // global.set
+            break;
+        }
         default: {
             console.log("Failed to assemble WASM chunk, instruction has unknown mnemonic!");
             return false; 
