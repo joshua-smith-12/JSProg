@@ -151,6 +151,20 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
         // CALL matches JMP in our implementation but requires a return address pushed
         case "CALL": {
             await assembleInstruction({mnemonic: "PUSH", operandSet: {type:'imm', val:0}});
+            if(instruction.operandSet[2].type === "imm" && !instruction.operandSet[2].indirect) {
+                // set link register
+                setLinkRegister(buffer, instruction.operandSet[2].val);
+            
+                // call function
+                buffer.push(0x10); // call
+                const index = imports.findIndex(x => x === `chunk${instruction.operandSet[1].val}::defaultExport`);
+                if (index === -1) return false;
+                buffer.push(index);
+            } else {
+                console.log("Non-immediate call targets are not yet supported.");
+                return false;
+            }
+            break;
         } 
         case "JMP": {
             if(instruction.operandSet[2].type === "imm" && !instruction.operandSet[2].indirect) {
