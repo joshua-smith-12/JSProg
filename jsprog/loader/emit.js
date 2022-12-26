@@ -173,7 +173,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             if (!operandToStack(instruction.operandSet[0], buffer)) return false;
                 
             // stores value at [esp]
-            if (!stackToOperand({type: "reg", val: registers.indexOf("esp"), size: instruction.operandSet[0].size, indirect: true})) return false;
+            if (!stackToOperand({type: "reg", val: registers.indexOf("esp"), size: instruction.operandSet[0].size, indirect: true}, buffer)) return false;
                 
             // shift ESP based on the operand size
             buffer.push(0x23); // global.get
