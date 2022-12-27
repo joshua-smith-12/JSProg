@@ -137,7 +137,7 @@ async function tryParseTables (fileBuffer, header) {
 	return { rvaTables, sectionTables };
 }
 
-async function findImports(fileBuffer, rvaTables, sectionTables) {
+async function findImports(fileBuffer, rvaTables, sectionTables, preferredBase) {
 	// identify the import section (commonly .idata, but not always)
 	const importRva = rvaTables[IMPORT_RVA_STATIC_IDX];
 	let importSection = null;
@@ -146,9 +146,12 @@ async function findImports(fileBuffer, rvaTables, sectionTables) {
 			importSection = section;
 	}
 	
+	// base address in loaded image
+	const importBaseAddress = section.virtualAddress + preferredBase;
+	
 	// import directory table exists at the offset of the import RVA inside the import section
 	const importDirectoryTable = importSection.dataPointer + (importRva.virtualAddress - importSection.virtualAddress);
-	console.log(`Import directory table found at ${importSection.name}, image offset 0x${importDirectoryTable.toString(16).toUpperCase()}`);
+	console.log(`Import directory table found at ${importSection.name}, image offset 0x${importDirectoryTable.toString(16).toUpperCase()}`);	
 	
 	const importTable = [];
 	let currentImportNumber = 0;
@@ -181,17 +184,19 @@ async function findImports(fileBuffer, rvaTables, sectionTables) {
 		const currImportList = [];
 		const importLookupPointer = importData.lookupPointer;
 		const importThunkPointer = importData.thunkPointer;
+		const importSectionOffset = importData.thunkPointer - importSection.dataPointer;
 		let currentLookupNumber = 0;
 		while (true) {
 			const currLookup = fileBuffer.readUInt32LE(importLookupPointer + currentLookupNumber*0x04);
 			const currThunk = fileBuffer.readUInt32LE(importThunkPointer + currentLookupNumber*0x04);
 			if (currLookup === 0x00) break;
+			const virtualImportAddr = importBaseAddress + importSectionOffset + currentLookupNumber * 0x04;
 			
 			// ordinal vs. hint lookup
 			const isOrdinal = (currLookup & 0x80000000) !== 0;
 			if (isOrdinal) {
 				const lookupNumber = currLookup & 0xFFFF;
-				const currImport = ImportHint(lookupNumber, null, currThunk);
+				const currImport = ImportHint(lookupNumber, null, currThunk, virtualImportAddr);
 				currImportList.push(currImport);
 			} else {
 				const hintVRA = currLookup & ~0x80000000;
@@ -199,7 +204,7 @@ async function findImports(fileBuffer, rvaTables, sectionTables) {
 				// read the hint ID and name
 				const hintID = fileBuffer.readUInt16LE(hintPointer);
 				const hintName = getNullTerminatedString(fileBuffer, hintPointer + 0x02);
-				const currImport = ImportHint(hintID, hintName, currThunk);
+				const currImport = ImportHint(hintID, hintName, currThunk, virtualImportAddr);
 				currImportList.push(currImport);
 			}
 			currentLookupNumber += 0x01;
@@ -219,7 +224,7 @@ async function tryParsePE(fileBuffer) {
 	if (!tables) return false;
 	const { rvaTables, sectionTables } = tables;
 	
-	const imports = await findImports(fileBuffer, rvaTables, sectionTables);
+	const imports = await findImports(fileBuffer, rvaTables, sectionTables, header.optionalHeader.imagePreferredBase);
 	if (!imports) return false;
 	const { importTable, importList, importSection } = imports;
 	
