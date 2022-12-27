@@ -147,7 +147,7 @@ async function findImports(fileBuffer, rvaTables, sectionTables, preferredBase) 
 	}
 	
 	// base address in loaded image
-	const importBaseAddress = section.virtualAddress + preferredBase;
+	const importBaseAddress = importSection.virtualAddress + preferredBase;
 	
 	// import directory table exists at the offset of the import RVA inside the import section
 	const importDirectoryTable = importSection.dataPointer + (importRva.virtualAddress - importSection.virtualAddress);
