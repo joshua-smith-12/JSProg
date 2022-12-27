@@ -2599,6 +2599,8 @@ const ProcessChunk = async (buf, addr, chunkRanges, fixupAddress, importList) =>
 			};
 		}
 		
+		const instr = Instruction(prefixSet, opcodeBytes, operandSet, instrStart, addr, operandName)
+		
 		// handle CALL as an additional chunk to explore
 		// CALL processing also fixes up some calls to EXTERNS as needed
 		if (operandName === "CALL") {
@@ -2609,13 +2611,13 @@ const ProcessChunk = async (buf, addr, chunkRanges, fixupAddress, importList) =>
 				const importDLL = importList.find(x => x.allImports.some(y => y.addr === operandSet[0].val));
 				if (importDLL) {
 					const importName = importDLL.allImports.find(y => y.addr === operandSet[0].val);
-					operandSet = [
+					instr.operandSet = [
 									{
 										type: 'extern',
 										val: `${importDLL.name}::${importName.name}`
 									}
 								];
-					operandName = "EXTERN";	
+					instr.operandName = "EXTERN";	
 				} else {
 					externalChunks.push(operandSet[0].val);
 				}	
@@ -2625,7 +2627,7 @@ const ProcessChunk = async (buf, addr, chunkRanges, fixupAddress, importList) =>
 		}
 		
 		// push this instruction to the chunk instruction list
-		chunkData.push(Instruction(prefixSet, opcodeBytes, operandSet, instrStart, addr, operandName));
+		chunkData.push(instr);
 		
 		// handle JMP and RET as chunk terminations
 		if (operandName === "JMP" || operandName === "RET") {
