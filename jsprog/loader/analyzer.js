@@ -2554,7 +2554,7 @@ const ProcessOpcode = (opcode, opChangeSize, buf, addr) => {
 	};
 };
 
-const ProcessChunk = async (buf, addr, chunkRanges, fixupAddress) => {
+const ProcessChunk = async (buf, addr, chunkRanges, fixupAddress, importList) => {
 	const chunkName = `FUN_${(addr + fixupAddress).toString(16).padStart(8, '0').toUpperCase()}`;
 	const chunkData = [];
 	const outstandingChunks = [];
@@ -2599,6 +2599,31 @@ const ProcessChunk = async (buf, addr, chunkRanges, fixupAddress) => {
 			};
 		}
 		
+		// handle CALL as an additional chunk to explore
+		// CALL processing also fixes up some calls to EXTERNS as needed
+		if (operandName === "CALL") {
+			const callTarget = addr + operandSet[0].val;
+			if (!chunkRanges.some(x => x.chunkRangeStart <= callTarget && x.chunkRangeEnd >= callTarget) && operandSet[0].type !== "reg") 
+			if (operandSet[0].indirect) {
+				// indirect chunks will generally be labels, and may be external to the primary code section
+				const importDLL = importList.find(x => x.allImports.some(y => y.addr === operandSet[0].val));
+				if (importDLL) {
+					const importName = importDLL.allImports.find(y => y.addr === operandSet[0].val);
+					operandSet = [
+									{
+										type: 'extern',
+										val: `${importDLL.name}::${importName.name}`
+									}
+								];
+					operandName = "EXTERN";	
+				} else {
+					externalChunks.push(operandSet[0].val);
+				}	
+			} else {
+				outstandingChunks.push(callTarget);
+			}	
+		}
+		
 		// push this instruction to the chunk instruction list
 		chunkData.push(Instruction(prefixSet, opcodeBytes, operandSet, instrStart, addr, operandName));
 		
@@ -2616,7 +2641,7 @@ const ProcessChunk = async (buf, addr, chunkRanges, fixupAddress) => {
 					continue;
 				} else {
 					// process the subchunk
-					const subChunk = await ProcessChunk(buf, jmp, chunkRanges, fixupAddress);
+					const subChunk = await ProcessChunk(buf, jmp, chunkRanges, fixupAddress, importList);
 					if (subChunk.error) return subChunk;
 					// include new outstanding chunks
 					for (var x of subChunk.outstandingChunks) {
@@ -2632,18 +2657,6 @@ const ProcessChunk = async (buf, addr, chunkRanges, fixupAddress) => {
 			}
 			// quit
 			break;
-		}
-
-		// handle CALL as an additional chunk to explore
-		if (operandName === "CALL") {
-			const callTarget = addr + operandSet[0].val;
-			if (!chunkRanges.some(x => x.chunkRangeStart <= callTarget && x.chunkRangeEnd >= callTarget) && operandSet[0].type !== "reg") 
-			if (operandSet[0].indirect) {
-				// indirect chunks will generally be labels, and may be external to the primary code section
-				externalChunks.push(operandSet[0].val);
-			} else {
-				outstandingChunks.push(callTarget);
-			}	
 		}
 
 		// handle conditional JMPs as new locations in the current chunk
@@ -2663,7 +2676,7 @@ const ProcessChunk = async (buf, addr, chunkRanges, fixupAddress) => {
 
 module.exports = {
 	
-	ProcessAllChunks: async function(buf, entrypoint, formalEntryPoint) {
+	ProcessAllChunks: async function(buf, entrypoint, formalEntryPoint, importList) {
 		const newChunks = [], chunkRanges = [], allChunks = [], externalChunks = [];
 		const fixupAddress = formalEntryPoint - entrypoint;
 		
@@ -2672,7 +2685,7 @@ module.exports = {
 			// check if this chunk was already processed at some point
 			if (!chunkRanges.some(x => x.chunkRangeStart <= addr && x.chunkRangeEnd > addr)) {
 				// process the chunk
-				const currChunk = await ProcessChunk(buf, addr, [], fixupAddress);
+				const currChunk = await ProcessChunk(buf, addr, [], fixupAddress, importList);
 				if (currChunk.error) return;
 				// register the chunks still to be explored
 				for (var x of currChunk.outstandingChunks) {

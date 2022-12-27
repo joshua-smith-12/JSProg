@@ -241,7 +241,7 @@ async function tryParsePE(fileBuffer) {
 	console.log(`Identified image entry point at ${codeSection.name}, image offset 0x${codeEntryOffset.toString(16).toUpperCase()}`);
 	
 	// launch code analysis starting from the entrypoint
-	const codeChunkSet = await analysis.ProcessAllChunks(fileBuffer, codeEntryOffset, header.formalEntryPoint);
+	const codeChunkSet = await analysis.ProcessAllChunks(fileBuffer, codeEntryOffset, header.formalEntryPoint, importList);
 	if (!codeChunkSet) return false;
 	// fixup references in JMP/CALL
 	const thunkBase = (header.optionalHeader.imagePreferredBase + importSection.virtualAddress) - importSection.dataPointer;
