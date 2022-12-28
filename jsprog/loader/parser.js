@@ -112,7 +112,12 @@ async function tryParseTables (fileBuffer, header) {
 	
 	const rvaTables = [];
 	for (let i = 0; i < header.rvaCount; i++) {
-		const currDirectory = DataDirectory(fileBuffer.readUInt32LE(rvaTableBase + i * 0x08 + 0x00), fileBuffer.readUInt32LE(rvaTableBase + i * 0x08 + 0x04));
+		const currDirectory = DataDirectory(
+			fileBuffer.readUInt32LE(rvaTableBase + i * 0x08 + 0x00),
+			fileBuffer.readUInt32LE(rvaTableBase + i * 0x08 + 0x04),
+			fileBuffer.readUInt32LE(rvaTableBase + i * 0x08 + 0x00) + preferredBase,
+			fileBuffer.readUInt32LE(rvaTableBase + i * 0x08 + 0x00) + fileBuffer.readUInt32LE(rvaTableBase + i * 0x08 + 0x04) + preferredBase,
+		);
 		rvaTables.push(currDirectory);
 	}
 
@@ -144,7 +149,6 @@ async function tryParseTables (fileBuffer, header) {
 async function findImports(fileBuffer, rvaTables, sectionTables, preferredBase) {
 	// identify the import section (commonly .idata, but not always)
 	const importRva = rvaTables[IMPORT_RVA_STATIC_IDX];
-	let importSection = null;
 	for (var section of sectionTables) {
 		if (section.virtualAddress <= importRva.virtualAddress && (section.virtualAddress + section.virtualSize) >= importRva.virtualAddress)
 			importSection = section;
@@ -228,7 +232,7 @@ async function tryParsePE(fileBuffer) {
 	if (!tables) return false;
 	const { rvaTables, sectionTables } = tables;
 	
-	const imports = await findImports(fileBuffer, rvaTables, sectionTables, header.optionalHeader.imagePreferredBase);
+	const imports = await findImports(fileBuffer, rvaTables, sectionTables);
 	if (!imports) return false;
 	const { importTable, importList, importSection } = imports;
 	
