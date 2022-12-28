@@ -135,6 +135,9 @@ async function tryParseTables (fileBuffer, header) {
 	
 	console.log(`Successfully read ${rvaTables.length} RVA tables and ${sectionTables.length} sections from image`);
 	
+	console.log(JSON.stringify(rvaTables));
+	console.log(JSON.stringify(sectionTables));
+	
 	return { rvaTables, sectionTables };
 }
 
