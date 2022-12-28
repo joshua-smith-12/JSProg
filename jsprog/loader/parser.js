@@ -106,7 +106,10 @@ async function tryParseHeader(fileBuffer) {
 }
 
 async function tryParseTables (fileBuffer, header) {
+	const preferredBase = header.optionalHeader.imagePreferredBase;
+
 	const rvaTableBase = header.optionalHeaderBase + 0x60;
+	
 	const rvaTables = [];
 	for (let i = 0; i < header.rvaCount; i++) {
 		const currDirectory = DataDirectory(fileBuffer.readUInt32LE(rvaTableBase + i * 0x08 + 0x00), fileBuffer.readUInt32LE(rvaTableBase + i * 0x08 + 0x04));
@@ -118,13 +121,11 @@ async function tryParseTables (fileBuffer, header) {
 	for (let i = 0; i < header.sectionCount; i++) {
 		const currSection = SectionHeader(
 			fileBuffer.toString('utf8', sectionTableBase + i*0x28 + 0x00, sectionTableBase + i*0x28 + 0x08), 
-			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x08), 
-			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x0C), 
-			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x10), 
+			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x0C),
 			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x14), 
-			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x18), 
-			fileBuffer.readUInt16LE(sectionTableBase + i*0x28 + 0x20), 
-			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x24)
+			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x24),
+			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x0C) + preferredBase,
+			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x0C) + fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x08) + preferredBase
 		);
 		
 		const sectionNameEnd = currSection.name.indexOf('\0') === -1 ? currSection.name.length : currSection.name.indexOf('\0');
