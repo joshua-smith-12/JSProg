@@ -2806,6 +2806,8 @@ module.exports = {
 							// identify the chunk containing this target
 							const targetChunk = chunks.filter(x => x.ranges.some(y => y.chunkRangeStart <= target && y.chunkRangeEnd > target));
 							if (targetChunk.length === 0) {
+								console.log(chunk.name);
+								console.log(instruction);
 								console.log(`No chunk exists to satisfy relocation to 0x${target.toString(16).toUpperCase()}`);
 									return;
 							}
