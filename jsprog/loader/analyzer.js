@@ -2629,7 +2629,7 @@ const ProcessChunk = async (buf, virtualAddress, dataPointer, chunkRanges, impor
 				// upper end is > and not >= as often, the subchunk will be right on the edge of the existing chunks.
 				if (!chunkRanges.some(x => x.chunkRangeStart <= jmp && x.chunkRangeEnd > jmp)) {
 					// process the subchunk
-					const jmpSection = sectionTables.some(y => y.addrStart <= jmp && y.addrEnd >= jmp);
+					const jmpSection = sectionTables.find(y => y.addrStart <= jmp && y.addrEnd >= jmp);
 					if (!jmpSection) return {error: true};
 					
 					const subChunk = await ProcessChunk(buf, jmp, jmpSection.dataPointer + (jmp - jmpSection.addrStart), chunkRanges, importList, sectionTables);
