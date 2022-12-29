@@ -15,10 +15,9 @@ async function processor(file) {
 	await fs.mkdir(`./chunks/${file}@${imageMajorVersion}.${imageMinorVersion}/`, { recursive: true });
 	for (const chunk of codeChunkSet) {
 		await fs.writeFile(`./chunks/${file}@${imageMajorVersion}.${imageMinorVersion}/chunks.1.${chunk.name}`, JSON.stringify(chunk, null, 4));
+		const wasmBytes = await emitter.assemble(chunk);
+		await fs.writeFile(`./chunks/${file}@${imageMajorVersion}.${imageMinorVersion}/chunks.1.${chunk.name}.wasm`, Buffer.from(wasmBytes), 'binary');
 	}
-	
-	const wasmBytes = await emitter.assemble(codeChunkSet[codeChunkSet.length - 1]);
-	console.log(wasmBytes);
 }
 
 processor('./hw2.exe');
