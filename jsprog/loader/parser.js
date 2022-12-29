@@ -242,18 +242,8 @@ async function tryParsePE(fileBuffer) {
 	
 	// TODO: confirm existence of the indicated DLLs with the required imports, or prompt to provide them if needed
 	
-	// find the section containing the entry point
-	let codeSection = null;
-	for (var section of sectionTables) {
-		if (section.virtualAddress <= header.optionalHeader.imageEntryPoint && (section.virtualAddress + section.virtualSize) >= header.optionalHeader.imageEntryPoint)
-			codeSection = section;
-	}
-	
-	const codeEntryOffset = codeSection.dataPointer + (header.optionalHeader.imageEntryPoint - codeSection.virtualAddress);
-	console.log(`Identified image entry point at ${codeSection.name}, image offset 0x${codeEntryOffset.toString(16).toUpperCase()}`);
-	
-	// launch code analysis starting from the entrypoint
-	const codeChunkSet = await analysis.ProcessAllChunks(fileBuffer, codeEntryOffset, header.formalEntryPoint, importList);
+	// launch code analysis
+	const codeChunkSet = await analysis.ProcessAllChunks(fileBuffer, sectionTables, header, importList);
 	if (!codeChunkSet) return false;
 	// fixup references in JMP/CALL
 	const thunkBase = (header.optionalHeader.imagePreferredBase + importSection.virtualAddress) - importSection.dataPointer;

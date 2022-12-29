@@ -2678,9 +2678,13 @@ const ProcessChunk = async (buf, addr, chunkRanges, fixupAddress, importList) =>
 
 module.exports = {
 	
-	ProcessAllChunks: async function(buf, entrypoint, formalEntryPoint, importList) {
+	ProcessAllChunks: async function(buf, sectionTables, header, importList) {
 		const newChunks = [], chunkRanges = [], allChunks = [], externalChunks = [];
-		const fixupAddress = formalEntryPoint - entrypoint;
+		
+		const entrypointSection = sectionTables.find(x => x.addrStart <= header.formalEntrypoint && x.addrEnd >= header.formalEntrypoint);
+		const entrypointOffset = header.formalEntryPoint - entrypointSection.addrStart;
+		
+		console.log(`Identified image entry point at image offset 0x${entrypointIffset.toString(16).toUpperCase()}, formal entrypoint 0x${header.formalEntryPoint.toString(16).toUpperCase()}`);
 		
 		let addr = entrypoint;
 		while (true) {
