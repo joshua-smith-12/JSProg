@@ -6,7 +6,7 @@ const ImportDirectory = NamedStruct('ImportDirectory', 'name', 'lookupPointer', 
 const ImportHint = NamedStruct('ImportHint', 'index', 'name', 'thunk', 'addr');
 const DllImportDefinition = NamedStruct('DllImportDefinition', 'name', 'allImports');
 
-const Instruction = NamedStruct('Instruction', 'prefixSet', 'opcode', 'operandSet', 'address', 'next', 'mnemonic');
+const Instruction = NamedStruct('Instruction', 'prefixSet', 'opcode', 'operandSet', 'virtualAddress', 'next', 'mnemonic');
 const Chunk = NamedStruct('Chunk', 'name', 'instructions', 'ranges', 'branchTargets');
  
 module.exports = {
