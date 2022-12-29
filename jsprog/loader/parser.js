@@ -178,7 +178,7 @@ async function findImports(fileBuffer, dataTables, sectionTables, preferredBase)
 		const importName = getNullTerminatedString(fileBuffer, importNameStringPtr);
 		
 		console.log(`Processing directory entry for import ${importName}`);
-		const currImport = ImportDirectory(importName, importLookupTablePtr, importThunkTablePointer);
+		const currImport = ImportDirectory(importName, importLookupTablePtr, importThunkTablePtr);
 		importTable.push(currImport);
 		
 		importIndex = importIndex + 1;
