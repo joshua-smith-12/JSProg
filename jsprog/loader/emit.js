@@ -249,7 +249,20 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
         case "RET": {
             buffer.push(0x0F);
             break;
-        }  
+        }
+        case "ADD": {
+            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            // negative add should be treated as a sub
+            if (instruction.operandSet[1].val < 0) {
+                instruction.operandSet[1].val = instruction.operandSet[1].val * -1;
+                if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
+                buffer.push(0x6B); // i32.sub
+            } else {
+                if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
+                buffer.push(0x6A); // i32.add
+            }
+            if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+        } 
         default: {
             console.log("Failed to assemble WASM chunk, instruction has unknown mnemonic!");
             return false; 
