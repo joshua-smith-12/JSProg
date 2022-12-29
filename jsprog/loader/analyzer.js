@@ -2753,8 +2753,8 @@ module.exports = {
 							console.log("Uncaught thunk pointing to virtual address inside section: " + thunked);
 							continue;
 						} else {
-							const importDLL = importList.find(x => x.allImports.some(y => y.addr === thunked));
-							const importName = importDLL.allImports.find(y => y.addr === thunked);
+							const importDLL = importList.find(x => x.allImports.some(y => y.thunk === thunked));
+							const importName = importDLL.allImports.find(y => y.thunk === thunked);
 							if (!importName) {
 								console.log(`No import exists to satisfy import located at 0x${operand.val.toString(16).toUpperCase()}`);
 								return;
