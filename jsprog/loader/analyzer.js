@@ -2616,7 +2616,11 @@ const ProcessChunk = async (buf, virtualAddress, dataPointer, chunkRanges, impor
 					const targetSection = sectionTables.find(x => x.addrStart <= target && x.addrEnd >= target);
 					const targetDataPointer = targetSection.dataPointer + (target - targetSection.addrStart);
 					const targetVirtualAddress = buf.readInt32LE(targetDataPointer);
-					if (!importList.some(x => x.allImports.some(y => y.thunk === targetVirtualAddress))) outstandingChunks.push(targetVirtualAddress);
+					if (!importList.some(x => x.allImports.some(y => y.thunk === targetVirtualAddress))) {
+						outstandingChunks.push(targetVirtualAddress);
+						operandSet[0].indirect = false;
+						operandSet[0].val = targetVirtualAddress;
+					}
 				} else {
 					outstandingChunks.push(callTarget);
 				}
@@ -2741,29 +2745,34 @@ module.exports = {
 						const targetDataPointer = targetSection.dataPointer + (target - targetSection.addrStart);
 
 						// need to determine the function being thunk'd
+						// if the thunk points to a chunk (a virtual address) then we point to the chunk
+						// else we point to an extern call
 						const thunked = buf.readInt32LE(targetDataPointer);
-						console.log(thunked);
-						const importDLL = importList.find(x => x.allImports.some(y => y.addr === thunked));
-						const importName = importDLL.allImports.find(y => y.addr === thunked);
-						if (!importName) {
-							console.log(`No import exists to satisfy import located at 0x${operand.val.toString(16).toUpperCase()}`);
-							return;
+						if (chunks.some(x => x.addrStart <= thunked && x.addrEnd >= thunked)) {
+							console.log("Uncaught thunk pointing to virtual address inside section: " + thunked);
+							continue;
 						} else {
-							// import was identified, so update the reference
-							instruction.mnemonic = "EXTERN";
-							instruction.opcode = 0xFF01;
-							instruction.operandSet = [
-								{
-									type: 'extern',
-									val: `${importDLL.name}::${importName.name}`
-								}
-							];
+							const importDLL = importList.find(x => x.allImports.some(y => y.addr === thunked));
+							const importName = importDLL.allImports.find(y => y.addr === thunked);
+							if (!importName) {
+								console.log(`No import exists to satisfy import located at 0x${operand.val.toString(16).toUpperCase()}`);
+								return;
+							} else {
+								// import was identified, so update the reference
+								instruction.mnemonic = "EXTERN";
+								instruction.opcode = 0xFF01;
+								instruction.operandSet = [
+									{
+										type: 'extern',
+										val: `${importDLL.name}::${importName.name}`
+									}
+								];
+							}
 						}
 					} else if (operand.type === 'imm') {
 						// non-indirect is always immediate, this implies a branch
 						// these are all offset from the next instruction
 						const target = operand.val + instruction.next;
-						console.log("Direct: " + target);
 						// if the current chunk contains this target, we can drop early and stay within the current chunk
 						if (chunk.instructions.some(x => x.virtualAddress === target)) {
 							// find the instruction number
