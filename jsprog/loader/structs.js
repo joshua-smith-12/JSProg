@@ -2,7 +2,7 @@ const NamedStruct = (name, ...keys) => ((...v) => keys.reduce((o, k, i) => {o[k]
  
 const DataDirectory = NamedStruct('DataDirectory', 'relativeVirtualAddress', 'size', 'addrStart', 'addrEnd');
 const SectionHeader = NamedStruct('SectionHeader', 'name', 'relativeVirtualAddress', 'dataPointer', 'characteristics', 'addrStart', 'addrEnd');
-const ImportDirectory = NamedStruct('ImportDirectory', 'name', 'lookupPointer', 'thunkPointer');
+const ImportDirectory = NamedStruct('ImportDirectory', 'name', 'lookupPointer');
 const ImportHint = NamedStruct('ImportHint', 'index', 'name', 'thunk', 'addr');
 const DllImportDefinition = NamedStruct('DllImportDefinition', 'name', 'allImports');
 
