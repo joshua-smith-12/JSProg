@@ -2615,12 +2615,8 @@ const ProcessChunk = async (buf, virtualAddress, dataPointer, chunkRanges, impor
 					// determine the data pointer for the target
 					const targetSection = sectionTables.find(x => x.addrStart <= target && x.addrEnd >= target);
 					const targetDataPointer = targetSection.dataPointer + (target - targetSection.addrStart);
-					console.log("Indirect: " + targetDataPointer);
 					const targetVirtualAddress = buf.readInt32LE(targetDataPointer);
-					if (!importList.some(x => x.allImports.some(y => y.thunk === targetVirtualAddress))) {
-					outstandingChunks.push(targetVirtualAddress);
-					console.log(targetVirtualAddress);
-					}
+					if (!importList.some(x => x.allImports.some(y => y.thunk === targetVirtualAddress))) outstandingChunks.push(targetVirtualAddress);
 				} else {
 					outstandingChunks.push(callTarget);
 				}
@@ -2740,13 +2736,13 @@ module.exports = {
 						// indirects do not get offset from the instruction, they are absolute
 						// these need to be fixup'd as function calls.
 						const target = operand.val;
-						console.log(operand.val);
 						// determine the data pointer for the target
 						const targetSection = 	sectionTables.find(x => x.addrStart <= target && x.addrEnd >= target);
 						const targetDataPointer = targetSection.dataPointer + (target - targetSection.addrStart);
 
 						// need to determine the function being thunk'd
 						const thunked = buf.readInt32LE(targetDataPointer);
+						console.log(thunked);
 						const importDLL = importList.find(x => x.allImports.some(y => y.addr === thunked));
 						const importName = importDLL.allImports.find(y => y.addr === thunked);
 						if (!importName) {
