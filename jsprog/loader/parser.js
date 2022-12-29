@@ -170,8 +170,8 @@ async function findImports(fileBuffer, dataTables, sectionTables, preferredBase)
 		// null entries means we reached the end of the import directory table
 		if (importLookupTableAddr === 0x00 && importNameStringAddr === 0x00) break;
 		
-		const importLookupTablePtr = importSection.dataPointer + (importLookupTableAddr + preferredBase - importSection.virtualAddress);
-		const importNameStringPtr = importSection.dataPointer + (importNameStringAddr + preferredBase - importSection.virtualAddress);
+		const importLookupTablePtr = importSection.dataPointer + (importLookupTableAddr - importSection.relativeVirtualAddress);
+		const importNameStringPtr = importSection.dataPointer + (importNameStringAddr - importSection.relativeVirtualAddress);
 		
 		const importName = getNullTerminatedString(fileBuffer, importNameStringPtr);
 		
