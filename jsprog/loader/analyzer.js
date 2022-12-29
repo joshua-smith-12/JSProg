@@ -2708,19 +2708,16 @@ module.exports = {
 			// progress to the new chunk
 			virtualAddress = newChunks.shift();
 		}
-		
-		console.log(externalChunks);	
-		console.log(allChunks.length);
 
 		return allChunks;
 	},
 
-	FixupChunkReferences: async function(chunks, thunkFixup, thunkMax, importList, buf) {
+	FixupChunkReferences: async function(chunks, sectionTables, importList, buf) {
 		// iterate all chunks in order to fixup references to addresses
 		// (in e.g. JMP, CALL, etc...)
 		// this also generates a list of branch targets per chunk
-		for (var chunk of chunks) {	
-			for (var instruction of chunk.instructions) {
+		for (const chunk of chunks) {	
+			for (const instruction of chunk.instructions) {
 				// instructions to fixup
 				if (instruction.mnemonic === "JMP" || instruction.mnemonic === "CALL" || conditionalJumpOps.includes(instruction.mnemonic)) {
 					const operand = instruction.operandSet[0];
@@ -2729,41 +2726,76 @@ module.exports = {
 						// immediate indirect operand implies this is a function call
 						// indirects do not get offset from the instruction, they are absolute
 						// these need to be fixup'd as function calls.
-						const target = operand.val - thunkFixup;
-
-						// if target is outside of the thunk range, it's likely to be sourced from another section
-						// (e.g. .00cfg section contains a couple far pointers)
-						// these will just be skipped for now.
+						const target = operand.val;
+						// determine the data pointer for the target
+						const targetSection = 	sectionTables.find(x => x.addrStart <= target && x.addrEnd >= target);
+						const targetDataPointer = targetSection.dataPointer + (target - targetSection.addrStart);
+						console.log(targetDataPointer);
 
 						// need to determine the function being thunk'd
-						if (target < thunkMax) {
-							const thunked = buf.readInt32LE(target);
-							const importDLL = importList.find(x => x.allImports.some(y => y.thunk === thunked));
-							const importName = importDLL.allImports.find(y => y.thunk === thunked);
-							if (!importName) {
-								console.log(`No import exists to satisfy import located at 0x${operand.val.toString(16).toUpperCase()}`);
-								return;
-							} else {
-								// import was identified, so update the reference
-								instruction.mnemonic = "EXTERN";
-								instruction.opcode = 0xFF01;
-								instruction.operandSet = [
-									{
-										type: 'extern',
-										val: `${importDLL.name}::${importName.name}`
-									}
-								];
-							}
+						const thunked = buf.readInt32LE(target);
+						const importDLL = importList.find(x => x.allImports.some(y => y.thunk === thunked));
+						const importName = importDLL.allImports.find(y => y.thunk === thunked);
+						if (!importName) {
+							console.log(`No import exists to satisfy import located at 0x${operand.val.toString(16).toUpperCase()}`);
+							return;
+						} else {
+							// import was identified, so update the reference
+							instruction.mnemonic = "EXTERN";
+							instruction.opcode = 0xFF01;
+							instruction.operandSet = [
+								{
+									type: 'extern',
+									val: `${importDLL.name}::${importName.name}`
+								}
+							];
 						}
-					} else if (operand.type === 'imm') {
-						// non-indirect is always immediate, this implies a branch
-						// these are all offset from the next instruction
-						const target = operand.val + instruction.next;
-						// if the current chunk contains this target, we can drop early and stay within the current chunk
-						if (chunk.instructions.some(x => x.address === target)) {
-							// find the instruction number
-							const instructionTarget = chunk.instructions.findIndex(x => x.address === target);
-							// set the chunk ID to -1 to indicate to remain in the current chunk
+					}
+				} else if (operand.type === 'imm') {
+					// non-indirect is always immediate, this implies a branch
+					// these are all offset from the next instruction
+					const target = operand.val + instruction.next;
+					// if the current chunk contains this target, we can drop early and stay within the current chunk
+					if (chunk.instructions.some(x => x.address === target)) {
+						// find the instruction number
+						const instructionTarget = chunk.instructions.findIndex(x => x.address === target);
+						// set the chunk ID to -1 to indicate to remain in the current chunk
+						// update operands
+						// operands for JMP/CALL are:
+						// - module ID
+						// - chunk ID
+						// - instruction ID
+						instruction.operandSet = [
+							{
+								type: 'imm',
+								val: 1,
+								size: 32
+							},
+							{
+								type: 'imm',
+								val: -1,
+								size: 32
+							},
+							{
+								type: 'imm',
+								val: instructionTarget,
+								size: 32
+							},
+						];
+						if (!chunk.branchTargets.includes(instructionTarget)) chunk.branchTargets.push(instructionTarget);
+					} else {
+						// identify the chunk containing this target
+						const targetChunk = chunks.filter(x => x.ranges.some(y => y.chunkRangeStart <= target && y.chunkRangeEnd > target));
+						if (targetChunk.length === 0) {
+							console.log(`No chunk exists to satisfy relocation to 0x${(target + fixup).toString(16).toUpperCase()}`);
+								return;
+						}
+
+						// it's possible for targetChunk to match more than one chunk (if chunks have distinct starts, but overlapping contents).
+						// this is generally fine, because the jmp will try to remain within the same chunk if possible, and will only depart if needed.
+						const targetChunkID = chunks.findIndex(x => x.name === targetChunk[0].name);
+						if (targetChunk[0].instructions.some(x => x.address === target)) {
+							const instructionTarget = targetChunk[0].instructions.findIndex(x => x.address === target);
 							// update operands
 							// operands for JMP/CALL are:
 							// - module ID
@@ -2777,7 +2809,7 @@ module.exports = {
 								},
 								{
 									type: 'imm',
-									val: -1,
+									val: targetChunkID,
 									size: 32
 								},
 								{
@@ -2786,49 +2818,11 @@ module.exports = {
 									size: 32
 								},
 							];
-							if (!chunk.branchTargets.includes(instructionTarget)) chunk.branchTargets.push(instructionTarget);
+							if (!targetChunk[0].branchTargets.includes(instructionTarget)) targetChunk[0].branchTargets.push(instructionTarget);
 						} else {
-							// identify the chunk containing this target
-							const targetChunk = chunks.filter(x => x.ranges.some(y => y.chunkRangeStart <= target && y.chunkRangeEnd > target));
-							if (targetChunk.length === 0) {
-								console.log(`No chunk exists to satisfy relocation to 0x${(target + fixup).toString(16).toUpperCase()}`);
-								return;
-							}
-
-							// it's possible for targetChunk to match more than one chunk (if chunks have distinct starts, but overlapping contents).
-							// this is generally fine, because the jmp will try to remain within the same chunk if possible, and will only depart if needed.
-							const targetChunkID = chunks.findIndex(x => x.name === targetChunk[0].name);
-							if (targetChunk[0].instructions.some(x => x.address === target)) {
-								const instructionTarget = targetChunk[0].instructions.findIndex(x => x.address === target);
-								// update operands
-								// operands for JMP/CALL are:
-								// - module ID
-								// - chunk ID
-								// - instruction ID
-								instruction.operandSet = [
-									{
-										type: 'imm',
-										val: 1,
-										size: 32
-									},
-									{
-										type: 'imm',
-										val: targetChunkID,
-										size: 32
-									},
-									{
-										type: 'imm',
-										val: instructionTarget,
-										size: 32
-									},
-								];
-								if (!targetChunk[0].branchTargets.includes(instructionTarget)) targetChunk[0].branchTargets.push(instructionTarget);
-							} else {
-								console.log(`No instruction exists in chosen chunk to satisfy relocation to 0x${(target + fixup).toString(16).toUpperCase()}`);
-								return;
-							}
+							console.log(`No instruction exists in chosen chunk to satisfy relocation to 0x${(target + fixup).toString(16).toUpperCase()}`);
+							return;
 						}
-						
 					}
 				}
 			}

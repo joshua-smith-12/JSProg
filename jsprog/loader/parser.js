@@ -245,9 +245,8 @@ async function tryParsePE(fileBuffer) {
 	// launch code analysis
 	const codeChunkSet = await analysis.ProcessAllChunks(fileBuffer, sectionTables, header, importList);
 	if (!codeChunkSet) return false;
-	// fixup references in JMP/CALL
-	const thunkBase = (header.optionalHeader.imagePreferredBase + importSection.virtualAddress) - importSection.dataPointer;
-	const codeChunkFixup = await analysis.FixupChunkReferences(codeChunkSet, thunkBase, importSection.dataPointer + importSection.dataSize, importList, fileBuffer);
+	
+	await analysis.FixupChunkReferences(codeChunkSet, sectionTables, importList, fileBuffer);
 	
 	return { header, tables, imports, codeChunkSet, codeEntryOffset };
 }
