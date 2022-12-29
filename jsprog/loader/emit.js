@@ -281,6 +281,18 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             break;
         } 
+        case "LEA": {
+            console.log(instruction);
+            if (!instruction.operandSet[1].indirect) {
+                console.log("Non-indirect LEA operand is not permitted");
+                return false;
+            }
+            
+            instruction.operandSet[1].indirect = false;
+            if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
+            if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            break;
+        }
         default: {
             console.log("Failed to assemble WASM chunk, instruction has unknown mnemonic!");
             return false; 
