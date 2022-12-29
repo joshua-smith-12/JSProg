@@ -2735,7 +2735,9 @@ module.exports = {
 
 						// need to determine the function being thunk'd
 						const thunked = buf.readInt32LE(targetDataPointer);
-						console.log(thunked);
+						const isChunkTarget = chunks.some(x => x.ranges.some(y => y.chunkRangeStart <= target && y.chunkRangeEnd > target));
+						console.log(isChunkTarget);
+							
 						const importDLL = importList.find(x => x.allImports.some(y => y.addr === thunked));
 						const importName = importDLL.allImports.find(y => y.addr === thunked);
 						if (!importName) {
