@@ -155,7 +155,7 @@ async function findImports(fileBuffer, dataTables, sectionTables, preferredBase)
 		return false;
 	}
 	
-	const importDataOffset = importData.virtualAddress - importSection.virtualAddress;
+	const importDataOffset = importData.relativeVirtualAddress - importSection.relativeVirtualAddress;
 	
 	// find the real file offset of the import directory table
 	const importTablePointer = importSection.dataPointer + importDataOffset;
