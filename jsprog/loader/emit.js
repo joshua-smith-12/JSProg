@@ -262,6 +262,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
                 buffer.push(0x6A); // i32.add
             }
             if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            break;
         } 
         default: {
             console.log("Failed to assemble WASM chunk, instruction has unknown mnemonic!");
