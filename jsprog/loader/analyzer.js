@@ -2681,7 +2681,7 @@ module.exports = {
 	ProcessAllChunks: async function(buf, sectionTables, header, importList) {
 		const newChunks = [], chunkRanges = [], allChunks = [], externalChunks = [];
 		
-		const entrypointSection = sectionTables.find(x => x.addrStart <= header.formalEntrypoint && x.addrEnd >= header.formalEntrypoint);
+		const entrypointSection = sectionTables.find(x => x.addrStart <= header.formalEntryPoint && x.addrEnd >= header.formalEntryPoint);
 		const entrypointOffset = header.formalEntryPoint - entrypointSection.addrStart;
 		
 		console.log(`Identified image entry point at image offset 0x${entrypointIffset.toString(16).toUpperCase()}, formal entrypoint 0x${header.formalEntryPoint.toString(16).toUpperCase()}`);
