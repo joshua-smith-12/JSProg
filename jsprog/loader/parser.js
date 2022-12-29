@@ -164,14 +164,14 @@ async function findImports(fileBuffer, dataTables, sectionTables, preferredBase)
 	const importTable = [];
 	let importIndex = 0;
 	while (true) {
-		const importLookupTableAddr = fileBuffer.readUInt32LE(importTablePointer + importIndex*0x14 + 0x00) + preferredBase;
-		const importNameStringAddr = fileBuffer.readUInt32LE(importTablePointer + importIndex*0x14 + 0x0C) + preferredBase;	
+		const importLookupTableAddr = fileBuffer.readUInt32LE(importTablePointer + importIndex*0x14 + 0x00);
+		const importNameStringAddr = fileBuffer.readUInt32LE(importTablePointer + importIndex*0x14 + 0x0C);	
 		
 		// null entries means we reached the end of the import directory table
 		if (importLookupTableAddr === 0x00 && importNameStringAddr === 0x00) break;
 		
-		const importLookupTablePtr = importSection.dataPointer + (importLookupTableAddr - importSection.virtualAddress);
-		const importNameStringPtr = importSection.dataPointer + (importNameStringAddr - importSection.virtualAddress);
+		const importLookupTablePtr = importSection.dataPointer + (importLookupTableAddr + preferredBase - importSection.virtualAddress);
+		const importNameStringPtr = importSection.dataPointer + (importNameStringAddr + preferredBase - importSection.virtualAddress);
 		
 		const importName = getNullTerminatedString(fileBuffer, importNameStringPtr);
 		
