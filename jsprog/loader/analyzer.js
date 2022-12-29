@@ -2735,8 +2735,8 @@ module.exports = {
 						// need to determine the function being thunk'd
 						const thunked = buf.readInt32LE(targetDataPointer);
 						console.log(thunked);
-						const importDLL = importList.find(x => x.allImports.some(y => y.thunk === thunked));
-						const importName = importDLL.allImports.find(y => y.thunk === thunked);
+						const importDLL = importList.find(x => x.allImports.some(y => y.addr === thunked));
+						const importName = importDLL.allImports.find(y => y.addr === thunked);
 						if (!importName) {
 							console.log(`No import exists to satisfy import located at 0x${operand.val.toString(16).toUpperCase()}`);
 							return;
