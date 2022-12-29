@@ -76,7 +76,7 @@ function operandToStack(operand, prefixes, buffer) {
             } else if (displacement) {
                 displacement = displacement * -1;
                 buffer.push(0x41); // i32.const
-                putConstOnBuffer(displacement);
+                putConstOnBuffer(buffer, displacement);
                 buffer.push(0x6B); // i32.sub
             } 
             if (!sizedLoad(buffer, operand.size)) return false;
