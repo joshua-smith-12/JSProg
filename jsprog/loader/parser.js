@@ -184,11 +184,11 @@ async function findImports(fileBuffer, dataTables, sectionTables, preferredBase)
 	// process the import hints in each imported DLL
 	// we don't care about thunks in this case since the calls will get patched over anyway during processing
 	const importList = [];
-	for (var importData of importTable) {
+	for (const importDll of importTable) {
 		const currImportList = [];
-		const importLookupPointer = importData.lookupPointer;
-		const importThunkPointer = importData.thunkPointer;
-		const importSectionOffset = importData.thunkPointer - importSection.dataPointer;
+		const importLookupPointer = importDll.lookupPointer;
+		const importThunkPointer = importDll.thunkPointer;
+		const importSectionOffset = importDll.thunkPointer - importSection.dataPointer;
 		let currentLookupNumber = 0;
 		while (true) {
 			const currLookup = fileBuffer.readUInt32LE(importLookupPointer + currentLookupNumber*0x04);
@@ -213,7 +213,7 @@ async function findImports(fileBuffer, dataTables, sectionTables, preferredBase)
 			}
 			currentLookupNumber += 0x01;
 		}
-		const currImportTable = DllImportDefinition(importData.name, currImportList)
+		const currImportTable = DllImportDefinition(importDll.name, currImportList)
 		importList.push(currImportTable);
 	}
 	
