@@ -13,8 +13,10 @@ async function processor(file) {
 	const { optionalHeader } = header;
 	const { imageMajorVersion, imageMinorVersion } = optionalHeader;
 	await fs.mkdir(`./chunks/${file}@${imageMajorVersion}.${imageMinorVersion}/`, { recursive: true });
+	let chunkIndex = 0;
 	for (const chunk of codeChunkSet) {
-		await fs.writeFile(`./chunks/${file}@${imageMajorVersion}.${imageMinorVersion}/chunks.1.${chunk.name}`, JSON.stringify(chunk, null, 4));
+		await fs.writeFile(`./chunks/${file}@${imageMajorVersion}.${imageMinorVersion}/chunks.${chunkIndex}.${chunk.name}`, JSON.stringify(chunk, null, 4));
+		chunkIndex = chunkIndex + 1;
 		const wasmBytes = await emitter.assemble(chunk);
 		await fs.writeFile(`./chunks/${file}@${imageMajorVersion}.${imageMinorVersion}/chunks.1.${chunk.name}.wasm`, Buffer.from(wasmBytes), 'binary');
 	}
