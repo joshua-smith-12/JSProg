@@ -2733,7 +2733,8 @@ module.exports = {
 						console.log("Indirect: " + targetDataPointer);
 
 						// need to determine the function being thunk'd
-						const thunked = buf.readInt32LE(target);
+						const thunked = buf.readInt32LE(targetDataPointer);
+						console.log(thunked);
 						const importDLL = importList.find(x => x.allImports.some(y => y.thunk === thunked));
 						const importName = importDLL.allImports.find(y => y.thunk === thunked);
 						if (!importName) {
@@ -2782,6 +2783,7 @@ module.exports = {
 									size: 32
 								},
 							];
+							console.log(instruction);
 							if (!chunk.branchTargets.includes(instructionTarget)) chunk.branchTargets.push(instructionTarget);
 						} else {
 							// identify the chunk containing this target
@@ -2818,6 +2820,7 @@ module.exports = {
 										size: 32
 									},
 								];
+								console.log(instruction);
 								if (!targetChunk[0].branchTargets.includes(instructionTarget)) targetChunk[0].branchTargets.push(instructionTarget);
 							} else {
 								console.log(`No instruction exists in chosen chunk to satisfy relocation to 0x${target.toString(16).toUpperCase()}`);
