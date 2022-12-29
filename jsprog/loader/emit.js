@@ -263,6 +263,13 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             }
             if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             break;
+        }
+        case "XOR": {
+            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
+            buffer.push(0x73); // i32.xor
+            if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            break;
         } 
         default: {
             console.log("Failed to assemble WASM chunk, instruction has unknown mnemonic!");
