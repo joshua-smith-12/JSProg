@@ -53,8 +53,8 @@ function sizedStore(buffer, size) {
 
 // takes an operand (imm or reg) and places the value on the WASM stack.
 function operandToStack(operand, prefixes, buffer) {
-    const displacement = operand['displace'];
-    if (displacement) console.log(operand);
+    let displacement = operand['displace'];
+    
     if (operand.type === "imm") {
         if (operand.indirect) {
             buffer.push(0x41); // i32.const
@@ -69,6 +69,16 @@ function operandToStack(operand, prefixes, buffer) {
             buffer.push(0x23); // global.get
             buffer.push(operand.val);
             
+            if (displacement && displacement > 0) {
+                buffer.push(0x41); // i32.const
+                putConstOnBuffer(displacement);
+                buffer.push(0x6A); // i32.add
+            } else if (displacement) {
+                displacement = displacement * -1;
+                buffer.push(0x41); // i32.const
+                putConstOnBuffer(displacement);
+                buffer.push(0x6B); // i32.sub
+            } 
             if (!sizedLoad(buffer, operand.size)) return false;
         } else {
             buffer.push(0x23); // global.get
