@@ -2617,7 +2617,7 @@ const ProcessChunk = async (buf, virtualAddress, dataPointer, chunkRanges, impor
 					const targetDataPointer = targetSection.dataPointer + (target - targetSection.addrStart);
 					console.log("Indirect: " + targetDataPointer);
 					const targetVirtualAddress = buf.readInt32LE(targetDataPointer);
-					if (!importList.some(x => x.allImports.some(y => y.addr === targetVirtualAddress))) {
+					if (!importList.some(x => x.allImports.some(y => y.thunk === targetVirtualAddress))) {
 					outstandingChunks.push(targetVirtualAddress);
 					console.log(targetVirtualAddress);
 					}
