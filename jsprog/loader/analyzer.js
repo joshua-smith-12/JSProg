@@ -2754,6 +2754,7 @@ module.exports = {
 						// non-indirect is always immediate, this implies a branch
 						// these are all offset from the next instruction
 						const target = operand.val + instruction.next;
+						console.log(target);
 						// if the current chunk contains this target, we can drop early and stay within the current chunk
 						if (chunk.instructions.some(x => x.address === target)) {
 							// find the instruction number
