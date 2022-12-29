@@ -2609,8 +2609,18 @@ const ProcessChunk = async (buf, virtualAddress, dataPointer, chunkRanges, impor
 		// CALL processing also fixes up some calls to EXTERNS as needed
 		if (operandName === "CALL") {
 			let callTarget = nextInstructionAddress + operandSet[0].val;
-			if (!chunkRanges.some(x => x.chunkRangeStart <= callTarget && x.chunkRangeEnd >= callTarget) && operandSet[0].type !== "reg" && !operandSet[0].indirect) {
-				outstandingChunks.push(callTarget);
+			if (!chunkRanges.some(x => x.chunkRangeStart <= callTarget && x.chunkRangeEnd >= callTarget) && operandSet[0].type !== "reg") {
+				if (operandSet[0].indirect) {
+					const target = operandSet[0].val;
+					// determine the data pointer for the target
+					const targetSection = sectionTables.find(x => x.addrStart <= target && x.addrEnd >= target);
+					const targetDataPointer = targetSection.dataPointer + (target - targetSection.addrStart);
+					console.log("Indirect: " + targetDataPointer);
+					const targetVirtualAddress = buf.readInt32LE(targetDataPointer);
+					if (!importList.some(x => x.allImports.some(y => y.addr === targetVirtualAddress))) outstandingChunks.push(targetVirtualAddress);
+				} else {
+					outstandingChunks.push(callTarget);
+				}
 			}	
 		}
 		
@@ -2731,13 +2741,9 @@ module.exports = {
 						// determine the data pointer for the target
 						const targetSection = 	sectionTables.find(x => x.addrStart <= target && x.addrEnd >= target);
 						const targetDataPointer = targetSection.dataPointer + (target - targetSection.addrStart);
-						console.log("Indirect: " + targetDataPointer);
 
 						// need to determine the function being thunk'd
 						const thunked = buf.readInt32LE(targetDataPointer);
-						const isChunkTarget = chunks.some(x => x.ranges.some(y => y.chunkRangeStart <= target && y.chunkRangeEnd > target));
-						console.log(isChunkTarget);
-							
 						const importDLL = importList.find(x => x.allImports.some(y => y.addr === thunked));
 						const importName = importDLL.allImports.find(y => y.addr === thunked);
 						if (!importName) {
