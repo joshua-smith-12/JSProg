@@ -2786,7 +2786,7 @@ module.exports = {
 							// identify the chunk containing this target
 							const targetChunk = chunks.filter(x => x.ranges.some(y => y.chunkRangeStart <= target && y.chunkRangeEnd > target));
 							if (targetChunk.length === 0) {
-								console.log(`No chunk exists to satisfy relocation to 0x${(target + fixup).toString(16).toUpperCase()}`);
+								console.log(`No chunk exists to satisfy relocation to 0x${target.toString(16).toUpperCase()}`);
 									return;
 							}
 
@@ -2819,7 +2819,7 @@ module.exports = {
 								];
 								if (!targetChunk[0].branchTargets.includes(instructionTarget)) targetChunk[0].branchTargets.push(instructionTarget);
 							} else {
-								console.log(`No instruction exists in chosen chunk to satisfy relocation to 0x${(target + fixup).toString(16).toUpperCase()}`);
+								console.log(`No instruction exists in chosen chunk to satisfy relocation to 0x${target.toString(16).toUpperCase()}`);
 								return;
 							}
 						}
