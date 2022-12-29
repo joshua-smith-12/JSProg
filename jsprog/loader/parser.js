@@ -235,7 +235,7 @@ async function tryParsePE(fileBuffer) {
 	if (!tables) return false;
 	const { dataTables, sectionTables } = tables;
 	
-	const imports = await findImports(fileBuffer, dataTables, sectionTables);
+	const imports = await findImports(fileBuffer, dataTables, sectionTables, header.optionalHeader.imagePreferredBase);
 	if (!imports) return false;
 	const { importTable, importList, importSection } = imports;
 	
