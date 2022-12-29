@@ -13,7 +13,7 @@ the cost is efficiency as a decent number of opcodes are spent setting up blocks
 there are options for microoptimizations. one already implemented is to place the branch to the first instruction first in the branch list.
 it might be possible to use br_table for this with some additional work.
 */
-const registers = ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi", "link", "t1"];
+const registers = ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi", "link", "t1", "t2"];
 
 function sizedLoad(buffer, size) {
     if (size === 32) {
@@ -52,7 +52,7 @@ function sizedStore(buffer, size) {
 }
 
 // takes an operand (imm or reg) and places the value on the WASM stack.
-function operandToStack(operand, buffer) {
+function operandToStack(operand, prefixes, buffer) {
     const displacement = operand['displacement'];
     if (displacement) console.log(operand);
     if (operand.type === "imm") {
@@ -74,6 +74,21 @@ function operandToStack(operand, buffer) {
             buffer.push(0x23); // global.get
             buffer.push(operand.val);
         }
+    } else if (operand.type === 'moffs') {
+        // get the prefix and offset into t1 and t2
+        buffer.push(0x41); // i32.const
+        putConstOnBuffer(buffer, prefixes[0]);
+        buffer.push(0x23); // global.get
+        buffer.push(registers.indexOf("t1"));
+        
+        buffer.push(0x41); // i32.const
+        putConstOnBuffer(buffer, operand.val);
+        buffer.push(0x23); // global.get
+        buffer.push(registers.indexOf("t2"));
+        
+        // call import 0 for os-provided function
+        buffer.push(0x10);
+        buffer.push(0x00);
     } else {
         console.log("Unknown operand type to be placed on stack!");
         return false;
@@ -125,7 +140,7 @@ function stackToOperand(operand, buffer) {
             buffer.push(operand.val);
         }
     } else {
-        console.log("Unknown operand type to be placed on stack!");
+        console.log("Unknown operand type to be stored in operand!");
         return false;
     }
     
@@ -191,7 +206,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
         }
         case "PUSH": {    
             // value to be pushed as a const
-            if (!operandToStack(instruction.operandSet[0], buffer)) return false;
+            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
                 
             // stores value at [esp]
             if (!stackToOperand({type: "reg", val: registers.indexOf("esp"), size: instruction.operandSet[0].size, indirect: true}, buffer)) return false;
@@ -208,7 +223,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
         } 
         case "MOV": {
             // put source value on stack
-            if (!operandToStack(instruction.operandSet[1], buffer)) return false;
+            if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
             
             // copy to the destination operand
             if (!stackToOperand(instruction.operandSet[0], buffer)) return false;
@@ -217,7 +232,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
         }
         case "POP": {
             // read from [ESP]
-            if (!operandToStack({type: "reg", val: registers.indexOf("esp"), size: 32, indirect: true}, buffer)) return false;
+            if (!operandToStack({type: "reg", val: registers.indexOf("esp"), size: 32, indirect: true}, instruction.prefixSet, buffer)) return false;
             // pop into the desired operand
             if (!stackToOperand(instruction.operandSet[0], buffer)) return false;
             
@@ -277,6 +292,7 @@ async function assemble(chunk) {
     // section Import (0x02)
     // count the number of unique imports (each import is either EXTERN for a function import, or a JMP/CALL with a chunk ID other than -1)
     const importList = [];
+    importList.push("system::segmentFunction");
     for (const instruction of chunk.instructions) { 
         if ((instruction.mnemonic === "JMP" || instruction.mnemonic === "CALL" || conditionalJumpOps.includes(instruction.mnemonic)) && instruction.operandSet[0].type !== 'reg' && instruction.operandSet[1].val !== -1 && !importList.includes(`chunk${instruction.operandSet[1].val}::defaultExport`)) {
             importList.push(`chunk${instruction.operandSet[1].val}::defaultExport`);
