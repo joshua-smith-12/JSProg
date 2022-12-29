@@ -2619,7 +2619,7 @@ const ProcessChunk = async (buf, virtualAddress, dataPointer, chunkRanges, impor
 					if (!importList.some(x => x.allImports.some(y => y.thunk === targetVirtualAddress))) {
 						outstandingChunks.push(targetVirtualAddress);
 						operandSet[0].indirect = false;
-						operandSet[0].val = targetVirtualAddress - instruction.next;
+						operandSet[0].val = targetVirtualAddress - nextInstructionAddress;
 						console.log(operandSet[0]);
 					}
 				} else {
