@@ -2730,7 +2730,7 @@ module.exports = {
 						// determine the data pointer for the target
 						const targetSection = 	sectionTables.find(x => x.addrStart <= target && x.addrEnd >= target);
 						const targetDataPointer = targetSection.dataPointer + (target - targetSection.addrStart);
-						console.log(targetDataPointer);
+						console.log("Indirect: " + targetDataPointer);
 
 						// need to determine the function being thunk'd
 						const thunked = buf.readInt32LE(target);
@@ -2754,11 +2754,11 @@ module.exports = {
 						// non-indirect is always immediate, this implies a branch
 						// these are all offset from the next instruction
 						const target = operand.val + instruction.next;
-						console.log(target);
+						console.log("Direct: " + target);
 						// if the current chunk contains this target, we can drop early and stay within the current chunk
-						if (chunk.instructions.some(x => x.address === target)) {
+						if (chunk.instructions.some(x => x.virtualAddress === target)) {
 							// find the instruction number
-							const instructionTarget = chunk.instructions.findIndex(x => x.address === target);
+							const instructionTarget = chunk.instructions.findIndex(x => x.virtualAddress === target);
 							// set the chunk ID to -1 to indicate to remain in the current chunk
 							// update operands
 							// operands for JMP/CALL are:
@@ -2794,8 +2794,8 @@ module.exports = {
 							// it's possible for targetChunk to match more than one chunk (if chunks have distinct starts, but overlapping contents).
 							// this is generally fine, because the jmp will try to remain within the same chunk if possible, and will only depart if needed.
 							const targetChunkID = chunks.findIndex(x => x.name === targetChunk[0].name);
-							if (targetChunk[0].instructions.some(x => x.address === target)) {
-								const instructionTarget = targetChunk[0].instructions.findIndex(x => x.address === target);
+							if (targetChunk[0].instructions.some(x => x.virtualAddress === target)) {
+								const instructionTarget = targetChunk[0].instructions.findIndex(x => x.virtualAddress === target);
 								// update operands
 								// operands for JMP/CALL are:
 								// - module ID
