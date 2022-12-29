@@ -199,7 +199,8 @@ async function findImports(fileBuffer, dataTables, sectionTables, preferredBase)
 			const currLookup = fileBuffer.readUInt32LE(importLookupPointer + lookupIndex*0x04);
 			if (currLookup === 0x00) break;
 			
-			const importVirtualAddress = importThunkPointer + lookupIndex * 0x04 + preferredBase;
+			const importOffset = (importThunkPointer + lookupIndex * 0x04) - importSection.dataPointer;
+			const importVirtualAddress = importOffset + importSection.addrStart;
 			
 			// ordinal vs. hint lookup
 			const isOrdinal = (currLookup & 0x80000000) !== 0;
