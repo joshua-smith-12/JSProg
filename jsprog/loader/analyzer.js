@@ -2706,10 +2706,11 @@ module.exports = {
 				break;
 			}
 			// progress to the new chunk
-			addr = newChunks.shift();
+			virtualAddress = newChunks.shift();
 		}
 		
 		console.log(externalChunks);	
+		console.log(allChunks.length);
 
 		return allChunks;
 	},
