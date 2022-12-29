@@ -2620,6 +2620,7 @@ const ProcessChunk = async (buf, virtualAddress, dataPointer, chunkRanges, impor
 						outstandingChunks.push(targetVirtualAddress);
 						operandSet[0].indirect = false;
 						operandSet[0].val = targetVirtualAddress;
+						console.log(operandSet[0]);
 					}
 				} else {
 					outstandingChunks.push(callTarget);
@@ -2800,7 +2801,6 @@ module.exports = {
 									size: 32
 								},
 							];
-							console.log(instruction);
 							if (!chunk.branchTargets.includes(instructionTarget)) chunk.branchTargets.push(instructionTarget);
 						} else {
 							// identify the chunk containing this target
@@ -2837,7 +2837,6 @@ module.exports = {
 										size: 32
 									},
 								];
-								console.log(instruction);
 								if (!targetChunk[0].branchTargets.includes(instructionTarget)) targetChunk[0].branchTargets.push(instructionTarget);
 							} else {
 								console.log(`No instruction exists in chosen chunk to satisfy relocation to 0x${target.toString(16).toUpperCase()}`);
