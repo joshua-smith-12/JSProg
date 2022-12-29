@@ -2683,8 +2683,9 @@ module.exports = {
 		
 		const entrypointSection = sectionTables.find(x => x.addrStart <= header.formalEntryPoint && x.addrEnd >= header.formalEntryPoint);
 		const entrypointOffset = header.formalEntryPoint - entrypointSection.addrStart;
+		const imageOffset = entrypointOffset + entrypointSection.dataPointer;
 		
-		console.log(`Identified image entry point at image offset 0x${entrypointOffset.toString(16).toUpperCase()}, formal entrypoint 0x${header.formalEntryPoint.toString(16).toUpperCase()}`);
+		console.log(`Identified image entry point at section offset 0x${entrypointOffset.toString(16).toUpperCase()}, image offset 0x${imageOffset.toString(16).toUpperCase()}, formal entrypoint 0x${header.formalEntryPoint.toString(16).toUpperCase()}`);
 		
 		let addr = entrypoint;
 		while (true) {
