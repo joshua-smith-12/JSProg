@@ -2705,7 +2705,7 @@ module.exports = {
 				const chunkFinal = Chunk(currChunk.chunkName, currChunk.chunkData, currChunk.chunkRanges, []);
 				allChunks.push(chunkFinal);
 				
-				console.log(`Processed new chunk ${currChunk.chunkName}`);
+				//console.log(`Processed new chunk ${currChunk.chunkName}`);
 			}
 			
 			// check if chunk processing is complete

@@ -179,6 +179,8 @@ async function findImports(fileBuffer, dataTables, sectionTables, preferredBase)
 		importTable.push(currImport);
 	}
 	
+	console.log(JSON.stringify(importTable));
+	
 	// process the import hints in each imported DLL
 	// we don't care about thunks in this case since the calls will get patched over anyway during processing
 	const importList = [];
