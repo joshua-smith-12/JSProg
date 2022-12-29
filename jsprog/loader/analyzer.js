@@ -2727,6 +2727,7 @@ module.exports = {
 						// indirects do not get offset from the instruction, they are absolute
 						// these need to be fixup'd as function calls.
 						const target = operand.val;
+						console.log(operand.val);
 						// determine the data pointer for the target
 						const targetSection = 	sectionTables.find(x => x.addrStart <= target && x.addrEnd >= target);
 						const targetDataPointer = targetSection.dataPointer + (target - targetSection.addrStart);
