@@ -2750,52 +2750,15 @@ module.exports = {
 								}
 							];
 						}
-					}
-				} else if (operand.type === 'imm') {
-					// non-indirect is always immediate, this implies a branch
-					// these are all offset from the next instruction
-					const target = operand.val + instruction.next;
-					// if the current chunk contains this target, we can drop early and stay within the current chunk
-					if (chunk.instructions.some(x => x.address === target)) {
-						// find the instruction number
-						const instructionTarget = chunk.instructions.findIndex(x => x.address === target);
-						// set the chunk ID to -1 to indicate to remain in the current chunk
-						// update operands
-						// operands for JMP/CALL are:
-						// - module ID
-						// - chunk ID
-						// - instruction ID
-						instruction.operandSet = [
-							{
-								type: 'imm',
-								val: 1,
-								size: 32
-							},
-							{
-								type: 'imm',
-								val: -1,
-								size: 32
-							},
-							{
-								type: 'imm',
-								val: instructionTarget,
-								size: 32
-							},
-						];
-						if (!chunk.branchTargets.includes(instructionTarget)) chunk.branchTargets.push(instructionTarget);
-					} else {
-						// identify the chunk containing this target
-						const targetChunk = chunks.filter(x => x.ranges.some(y => y.chunkRangeStart <= target && y.chunkRangeEnd > target));
-						if (targetChunk.length === 0) {
-							console.log(`No chunk exists to satisfy relocation to 0x${(target + fixup).toString(16).toUpperCase()}`);
-								return;
-						}
-
-						// it's possible for targetChunk to match more than one chunk (if chunks have distinct starts, but overlapping contents).
-						// this is generally fine, because the jmp will try to remain within the same chunk if possible, and will only depart if needed.
-						const targetChunkID = chunks.findIndex(x => x.name === targetChunk[0].name);
-						if (targetChunk[0].instructions.some(x => x.address === target)) {
-							const instructionTarget = targetChunk[0].instructions.findIndex(x => x.address === target);
+					} else if (operand.type === 'imm') {
+						// non-indirect is always immediate, this implies a branch
+						// these are all offset from the next instruction
+						const target = operand.val + instruction.next;
+						// if the current chunk contains this target, we can drop early and stay within the current chunk
+						if (chunk.instructions.some(x => x.address === target)) {
+							// find the instruction number
+							const instructionTarget = chunk.instructions.findIndex(x => x.address === target);
+							// set the chunk ID to -1 to indicate to remain in the current chunk
 							// update operands
 							// operands for JMP/CALL are:
 							// - module ID
@@ -2809,7 +2772,7 @@ module.exports = {
 								},
 								{
 									type: 'imm',
-									val: targetChunkID,
+									val: -1,
 									size: 32
 								},
 								{
@@ -2818,15 +2781,51 @@ module.exports = {
 									size: 32
 								},
 							];
-							if (!targetChunk[0].branchTargets.includes(instructionTarget)) targetChunk[0].branchTargets.push(instructionTarget);
+							if (!chunk.branchTargets.includes(instructionTarget)) chunk.branchTargets.push(instructionTarget);
 						} else {
-							console.log(`No instruction exists in chosen chunk to satisfy relocation to 0x${(target + fixup).toString(16).toUpperCase()}`);
-							return;
+							// identify the chunk containing this target
+							const targetChunk = chunks.filter(x => x.ranges.some(y => y.chunkRangeStart <= target && y.chunkRangeEnd > target));
+							if (targetChunk.length === 0) {
+								console.log(`No chunk exists to satisfy relocation to 0x${(target + fixup).toString(16).toUpperCase()}`);
+									return;
+							}
+
+							// it's possible for targetChunk to match more than one chunk (if chunks have distinct starts, but overlapping contents).
+							// this is generally fine, because the jmp will try to remain within the same chunk if possible, and will only depart if needed.
+							const targetChunkID = chunks.findIndex(x => x.name === targetChunk[0].name);
+							if (targetChunk[0].instructions.some(x => x.address === target)) {
+								const instructionTarget = targetChunk[0].instructions.findIndex(x => x.address === target);
+								// update operands
+								// operands for JMP/CALL are:
+								// - module ID
+								// - chunk ID
+								// - instruction ID
+								instruction.operandSet = [
+									{
+										type: 'imm',
+										val: 1,
+										size: 32
+									},
+									{
+										type: 'imm',
+										val: targetChunkID,
+										size: 32
+									},
+									{
+										type: 'imm',
+										val: instructionTarget,
+										size: 32
+									},
+								];
+								if (!targetChunk[0].branchTargets.includes(instructionTarget)) targetChunk[0].branchTargets.push(instructionTarget);
+							} else {
+								console.log(`No instruction exists in chosen chunk to satisfy relocation to 0x${(target + fixup).toString(16).toUpperCase()}`);
+								return;
+							}
 						}
 					}
 				}
 			}
 		}
 	}
-	
 };
