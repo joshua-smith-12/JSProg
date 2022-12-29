@@ -2602,11 +2602,11 @@ const ProcessChunk = async (buf, virtualAddress, dataPointer, chunkRanges, impor
 			};
 		}
 		
-		const instr = Instruction(prefixSet, opcodeBytes, operandSet, instructionAddress, dataPointer, operandName);
+		const nextInstructionAddress = instructionAddress + (dataPointer - instructionDataStart);
+		const instr = Instruction(prefixSet, opcodeBytes, operandSet, instructionAddress, nextInstructionAddress, operandName);
 		
 		// handle CALL as an additional chunk to explore
 		// CALL processing also fixes up some calls to EXTERNS as needed
-		const nextInstructionAddress = instructionAddress + (dataPointer - instructionDataStart);
 		if (operandName === "CALL") {
 			let callTarget = nextInstructionAddress + operandSet[0].val;
 			if (!chunkRanges.some(x => x.chunkRangeStart <= callTarget && x.chunkRangeEnd >= callTarget) && operandSet[0].type !== "reg" && !operandSet[0].indirect) {
