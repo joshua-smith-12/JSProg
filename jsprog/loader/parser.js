@@ -166,17 +166,19 @@ async function findImports(fileBuffer, dataTables, sectionTables, preferredBase)
 	while (true) {
 		const importLookupTableAddr = fileBuffer.readUInt32LE(importTablePointer + importIndex*0x14 + 0x00);
 		const importNameStringAddr = fileBuffer.readUInt32LE(importTablePointer + importIndex*0x14 + 0x0C);	
+		const importThunkTableAddr = fileBuffer.readUInt32LE(importTablePointer + importIndex*0x14 + 0x10);
 		
 		// null entries means we reached the end of the import directory table
-		if (importLookupTableAddr === 0x00 && importNameStringAddr === 0x00) break;
+		if (importLookupTableAddr === 0x00 && importNameStringAddr === 0x00 && importThunkTableAddr === 0x00) break;
 		
 		const importLookupTablePtr = importSection.dataPointer + (importLookupTableAddr - importSection.relativeVirtualAddress);
 		const importNameStringPtr = importSection.dataPointer + (importNameStringAddr - importSection.relativeVirtualAddress);
+		const importThunkTablePtr = importSection.dataPointer + (importThunkTableAddr - importSection.relativeVirtualAddress);
 		
 		const importName = getNullTerminatedString(fileBuffer, importNameStringPtr);
 		
 		console.log(`Processing directory entry for import ${importName}`);
-		const currImport = ImportDirectory(importName, importLookupTablePtr);
+		const currImport = ImportDirectory(importName, importLookupTablePtr, importThunkTablePointer);
 		importTable.push(currImport);
 		
 		importIndex = importIndex + 1;
@@ -191,27 +193,27 @@ async function findImports(fileBuffer, dataTables, sectionTables, preferredBase)
 		const currImportList = [];
 		const importLookupPointer = importDll.lookupPointer;
 		const importThunkPointer = importDll.thunkPointer;
-		const importSectionOffset = importDll.thunkPointer - importSection.dataPointer;
+		
 		let lookupIndex = 0;
 		while (true) {
 			const currLookup = fileBuffer.readUInt32LE(importLookupPointer + lookupIndex*0x04);
-			const currThunk = fileBuffer.readUInt32LE(importThunkPointer + lookupIndex*0x04);
 			if (currLookup === 0x00) break;
-			const virtualImportAddr = importBaseAddress + importSectionOffset + lookupIndex * 0x04;
+			
+			const importVirtualAddress = importThunkPointer + lookupIndex * 0x04 + preferredBase;
 			
 			// ordinal vs. hint lookup
 			const isOrdinal = (currLookup & 0x80000000) !== 0;
 			if (isOrdinal) {
 				const lookupNumber = currLookup & 0xFFFF;
-				const currImport = ImportHint(lookupNumber, null, currThunk, virtualImportAddr);
+				const currImport = ImportHint(lookupNumber, null, currLookup, importVirtualAddress);
 				currImportList.push(currImport);
 			} else {
-				const hintVRA = currLookup & ~0x80000000;
-				const hintPointer = importSection.dataPointer + (hintVRA - importSection.virtualAddress);
+				const hintRVA = currLookup & ~0x80000000;
+				const hintPointer = importSection.dataPointer + (hintRVA - importSection.relativeVirtualAddress);
 				// read the hint ID and name
 				const hintID = fileBuffer.readUInt16LE(hintPointer);
 				const hintName = getNullTerminatedString(fileBuffer, hintPointer + 0x02);
-				const currImport = ImportHint(hintID, hintName, currThunk, virtualImportAddr);
+				const currImport = ImportHint(hintID, hintName, currLookup, importVirtualAddress);
 				currImportList.push(currImport);
 			}
 			lookupIndex += 0x01;
@@ -219,6 +221,8 @@ async function findImports(fileBuffer, dataTables, sectionTables, preferredBase)
 		const currImportTable = DllImportDefinition(importDll.name, currImportList)
 		importList.push(currImportTable);
 	}
+	
+	console.log(JSON.stringify(importList));
 	
 	return { importTable, importList, importSection };
 }
