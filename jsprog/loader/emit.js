@@ -149,6 +149,21 @@ function stackToOperand(operand, buffer) {
             buffer.push(0x24); // global.set
             buffer.push(operand.val);
         }
+    } else if (operand.type === 'moffs') {
+        // get the prefix and offset into t1 and t2
+        buffer.push(0x41); // i32.const
+        putConstOnBuffer(buffer, prefixes[0]);
+        buffer.push(0x23); // global.get
+        buffer.push(registers.indexOf("t1"));
+        
+        buffer.push(0x41); // i32.const
+        putConstOnBuffer(buffer, operand.val);
+        buffer.push(0x23); // global.get
+        buffer.push(registers.indexOf("t2"));
+        
+        // call import 1 for os-provided function
+        buffer.push(0x10);
+        buffer.push(0x01);
     } else {
         console.log("Unknown operand type to be stored in operand!");
         return false;
@@ -335,7 +350,8 @@ async function assemble(chunk) {
     // section Import (0x02)
     // count the number of unique imports (each import is either EXTERN for a function import, or a JMP/CALL with a chunk ID other than -1)
     const importList = [];
-    importList.push("system::segmentFunction");
+    importList.push("system::readSegment");
+    importList.push("system::writeSegment");
     for (const instruction of chunk.instructions) { 
         if ((instruction.mnemonic === "JMP" || instruction.mnemonic === "CALL" || conditionalJumpOps.includes(instruction.mnemonic)) && instruction.operandSet[0].type !== 'reg' && instruction.operandSet[1].val !== -1 && !importList.includes(`chunk${instruction.operandSet[1].val}::defaultExport`)) {
             importList.push(`chunk${instruction.operandSet[1].val}::defaultExport`);
