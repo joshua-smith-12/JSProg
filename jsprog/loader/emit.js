@@ -292,6 +292,15 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(0x24); // global.set
             buffer.push(registers.indexOf("t1"));
             
+            // reset relevant flags
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("flags"));
+            buffer.push(0x41); // i32.const
+            putConstOnBuffer(buffer, 63274); // bitmask
+            buffer.push(0x71); // i32.and
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("flags"));
+            
             // compute flags
             // CF - carry
             // set if a+b overflows unsigned
