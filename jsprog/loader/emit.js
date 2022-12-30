@@ -404,7 +404,7 @@ function putConstOnBuffer(chunkBuffer, constValue) {
     for (const b of byteValue) chunkBuffer.push(b);
 } 
 
-async function assemble(chunk) {
+async function assemble(chunk, debuggerEnabled) {
     const chunkBuffer = [];
     
     // WASM_BINARY_MAGIC
@@ -434,6 +434,7 @@ async function assemble(chunk) {
     const importList = [];
     importList.push("system::readSegment");
     importList.push("system::writeSegment");
+    importList.push("system::debugger");
     for (const instruction of chunk.instructions) { 
         if ((instruction.mnemonic === "JMP" || instruction.mnemonic === "CALL" || conditionalJumpOps.includes(instruction.mnemonic)) && instruction.operandSet[0].type !== 'reg' && instruction.operandSet[1].val !== -1 && !importList.includes(`chunk${instruction.operandSet[1].val}::defaultExport`)) {
             importList.push(`chunk${instruction.operandSet[1].val}::defaultExport`);
@@ -555,6 +556,10 @@ async function assemble(chunk) {
             console.log(JSON.stringify(instruction));
             return false;
         } 
+        if (debuggerEnabled) {
+            chunkBuffer.push(0x10); // call
+            chunkBuffer.push(0x02); // debugger index
+        }
     }
     
     // close the root loop
