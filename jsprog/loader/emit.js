@@ -490,8 +490,8 @@ async function assemble(chunk, debuggerEnabled) {
     }
     
     const importSectionLength = chunkBuffer.length - preImportSize;
-    chunkBuffer[preImportSize - 2] = Math.floor(importSectionLength / 128);
-    chunkBuffer[preImportSize - 3] = importSectionLength % 128;
+    chunkBuffer[preImportSize - 1] = Math.floor(importSectionLength / 128);
+    chunkBuffer[preImportSize - 2] = importSectionLength % 128;
     
     // section Function (0x03)
     chunkBuffer.push(0x03);
