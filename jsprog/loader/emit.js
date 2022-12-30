@@ -445,6 +445,7 @@ async function assemble(chunk, debuggerEnabled) {
     
     chunkBuffer.push(0x02);
     chunkBuffer.push(0x00);
+    chunkBuffer.push(0x00);
     
     chunkBuffer.push(0x01); // todo: understand this
     
@@ -490,7 +491,9 @@ async function assemble(chunk, debuggerEnabled) {
         chunkBuffer.push(0x00); // function signature type index
     }
     
-    chunkBuffer[preImportSize - 2] = chunkBuffer.length - preImportSize; // fixup size
+    const importSectionLength = chunkBuffer.length - preImportSize;
+    chunkBuffer[preImportSize - 2] = Math.floor(importSectionLength / 128);
+    chunkBuffer[preImportSize - 3] = importSectionLength % 128;
     
     // section Function (0x03)
     chunkBuffer.push(0x03);
