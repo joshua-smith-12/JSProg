@@ -108,7 +108,7 @@ function operandToStack(operand, prefixes, buffer) {
 }
 
 // assuming a value exists on the WASM stack, moves this value into an operand.
-function stackToOperand(operand, buffer) {
+function stackToOperand(operand, prefixes, buffer) {
     if (operand.type === "imm") {
         if (operand.indirect) {
             // read the value into temp register
@@ -234,7 +234,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
                 
             // stores value at [esp]
-            if (!stackToOperand({type: "reg", val: registers.indexOf("esp"), size: instruction.operandSet[0].size, indirect: true}, buffer)) return false;
+            if (!stackToOperand({type: "reg", val: registers.indexOf("esp"), size: instruction.operandSet[0].size, indirect: true}, [], buffer)) return false;
                 
             // shift ESP based on the operand size
             buffer.push(0x23); // global.get
@@ -251,7 +251,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
             
             // copy to the destination operand
-            if (!stackToOperand(instruction.operandSet[0], buffer)) return false;
+            if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             
             break;
         }
@@ -259,7 +259,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             // read from [ESP]
             if (!operandToStack({type: "reg", val: registers.indexOf("esp"), size: 32, indirect: true}, instruction.prefixSet, buffer)) return false;
             // pop into the desired operand
-            if (!stackToOperand(instruction.operandSet[0], buffer)) return false;
+            if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             
             // shift ESP based on the operand size
             buffer.push(0x23); // global.get
