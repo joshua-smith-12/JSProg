@@ -13,7 +13,7 @@ the cost is efficiency as a decent number of opcodes are spent setting up blocks
 there are options for microoptimizations. one already implemented is to place the branch to the first instruction first in the branch list.
 it might be possible to use br_table for this with some additional work.
 */
-const registers = ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi", "link", "t1", "t2"];
+const registers = ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi", "link", "flags", "t1", "t2"];
 
 function sizedLoad(buffer, size) {
     if (size === 32) {
@@ -280,14 +280,86 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             // negative add should be treated as a sub
             if (instruction.operandSet[1].val < 0) {
-                instruction.operandSet[1].val = instruction.operandSet[1].val * -1;
-                if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
+                const flipped = instruction.operandSet[1].val * -1;
+                if (!operandToStack(flipped, instruction.prefixSet, buffer)) return false;
                 buffer.push(0x6B); // i32.sub
             } else {
                 if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
                 buffer.push(0x6A); // i32.add
             }
+            
+            // place in t1 for temp storage
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("t1"));
+            
+            // compute flags
+            // CF - carry
+            // set if a+b overflows unsigned
+            // detect by checking if result is less than both a and b (unsigned)
+            buffer.push(0x02); // block cf_not_set
+            buffer.push(0x40);
+            buffer.push(0x02); // block cf_test_2
+            buffer.push(0x40);
+            buffer.push(0x02); // block cf_test_1
+            buffer.push(0x40);
+            
+            // compare to first operand
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1"));
+            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            buffer.push(0x49); // i32.lt_u
+            buffer.push(0x0D); // br_if
+            buffer.push(0x00); // cf_test_1
+            buffer.push(0x0C); // br
+            buffer.push(0x02); // cf_not_set
+            buffer.push(0x0B); // end cf_test_1
+            
+            // compare to second operand
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1"));
+            if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
+            buffer.push(0x49); // i32.lt_u
+            buffer.push(0x0D); // br_if
+            buffer.push(0x00); // cf_test_2
+            buffer.push(0x0C); // br
+            buffer.push(0x01); // cf_not_set
+            buffer.push(0x0B); // end cf_test_2
+            
+            // both tests passed, update flags bit 0
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("flags"));
+            buffer.push(0x41); // i32.const
+            buffer.push(0x01); // bit 0 set
+            buffer.push(0x72); // i32.or
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("flags"));
+            
+            // PF - parity
+            // set if the number of bits set in result is even
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1"));
+            buffer.push(0x69); // i32.popcnt
+            buffer.push(0x41); // i32.const
+            buffer.push(0x02);
+            buffer.push(0x70); // i32.rem_u
+            buffer.push(0x41); // i32.const
+            buffer.push(0x01);
+            buffer.push(0x73); // i32.xor
+            buffer.push(0x41); // i32.const
+            buffer.push(0x04); // for setting bit 2
+            buffer.push(0x6C); // i32.mul
+            // update flags bit 2
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("flags"));
+            buffer.push(0x72); // i32.or
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("flags")); 
+            
+            // restore from t1 and put into destination operand
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1"));
             if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            
             break;
         }
         case "XOR": {
