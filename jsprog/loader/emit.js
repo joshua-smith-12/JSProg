@@ -447,8 +447,6 @@ async function assemble(chunk, debuggerEnabled) {
     chunkBuffer.push(0x00);
     chunkBuffer.push(0x00);
     
-    chunkBuffer.push(0x01); // todo: understand this
-    
     const preImportSize = chunkBuffer.length;
     chunkBuffer.push(importList.length + 1 + registers.length); // import count +1 for Memory, +x for registers
     
