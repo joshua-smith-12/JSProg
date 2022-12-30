@@ -246,7 +246,8 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(registers.indexOf("esp"));
             break;
         } 
-        case "MOV": {
+        case "MOV": 
+        case "MOVZX": {
             // put source value on stack
             if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
             
