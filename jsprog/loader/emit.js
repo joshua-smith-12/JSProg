@@ -483,6 +483,26 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             break;
         }
+        case "JNE":
+        case "JNZ": {
+            // create a block
+            buffer.push(0x02); 
+            buffer.push(0x40);
+            // get ZF
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("zf"));
+            // test if zero and break if so
+            buffer.push(0x45); // i32.eqz
+            buffer.push(0x0D); // br_if
+            buffer.push(0x00);
+            
+            // value is not zero, perform regular JUMP
+            instruction.mnemonic = "JUMP";
+            await assembleInstruction(instruction, buffer, imports, targets, instrIndex);
+            
+            buffer.push(0x0B); // close block
+            break;
+        }
         default: {
             console.log("Failed to assemble WASM chunk, instruction has unknown mnemonic!");
             return false; 
