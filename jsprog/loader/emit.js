@@ -682,6 +682,10 @@ async function assemble(chunk, debuggerEnabled) {
             return false;
         } 
         if (debuggerEnabled) {
+            tempFuncBuffer.push(0x41); // i32.const
+            putConstOnBuffer(tempFuncBuffer, i);
+            tempFuncBuffer.push(0x24); // global.set
+            tempFuncBuffer.push(registers.indexOf("t1"));
             tempFuncBuffer.push(0x10); // call
             tempFuncBuffer.push(0x02); // debugger index
         }
