@@ -497,7 +497,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(0x00);
             
             // value is not zero, perform regular JUMP
-            instruction.mnemonic = "JUMP";
+            instruction.mnemonic = "JMP";
             await assembleInstruction(instruction, buffer, imports, targets, instrIndex);
             
             buffer.push(0x0B); // close block
