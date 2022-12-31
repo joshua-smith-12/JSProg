@@ -444,54 +444,51 @@ async function assemble(chunk, debuggerEnabled) {
     }
     
     chunkBuffer.push(0x02);
-    chunkBuffer.push(0x00);
-    chunkBuffer.push(0x00);
+    const tempImportBuffer = [];
     
-    const preImportSize = chunkBuffer.length;
-    chunkBuffer.push(importList.length + 1 + registers.length); // import count +1 for Memory, +x for registers
+    tempImportBuffer.push(importList.length + 1 + registers.length); // import count +1 for Memory, +x for registers
     
     // memory import
     const memModuleName = Buffer.from("js");
     const memImportName = Buffer.from("mem");
-    chunkBuffer.push(memModuleName.length); // length
-    for (const b of memModuleName) chunkBuffer.push(b);
-    chunkBuffer.push(memImportName.length);
-    for (const b of memImportName) chunkBuffer.push(b);
+    tempImportBuffer.push(memModuleName.length); // length
+    for (const b of memModuleName) tempImportBuffer.push(b);
+    tempImportBuffer.push(memImportName.length);
+    for (const b of memImportName) tempImportBuffer.push(b);
     
-    chunkBuffer.push(0x02); // type (memory)
-    chunkBuffer.push(0x00); // flags
-    chunkBuffer.push(0x01); // initial size
+    tempImportBuffer.push(0x02); // type (memory)
+    tempImportBuffer.push(0x00); // flags
+    tempImportBuffer.push(0x01); // initial size
     
     const regModuleName = Buffer.from("registers");
     for (const register of registers) {
-        chunkBuffer.push(regModuleName.length); // length
-        for (const b of regModuleName) chunkBuffer.push(b);
+        tempImportBuffer.push(regModuleName.length); // length
+        for (const b of regModuleName) tempImportBuffer.push(b);
         
         const regImportName = Buffer.from(register);
-        chunkBuffer.push(regImportName.length); // length
-        for (const b of regImportName) chunkBuffer.push(b);
+        tempImportBuffer.push(regImportName.length); // length
+        for (const b of regImportName) tempImportBuffer.push(b);
         
-        chunkBuffer.push(0x03); // global import
-        chunkBuffer.push(0x7F); // i32
-        chunkBuffer.push(0x01); // mut flag 
+        tempImportBuffer.push(0x03); // global import
+        tempImportBuffer.push(0x7F); // i32
+        tempImportBuffer.push(0x01); // mut flag 
     }
     
     // function imports
     for (const imp of importList) {
         const moduleName = Buffer.from(imp.split("::")[0]);
         const importName = Buffer.from(imp.split("::")[1]);
-        chunkBuffer.push(moduleName.length);
-        for (const b of moduleName) chunkBuffer.push(b);
-        chunkBuffer.push(importName.length);
-        for (const b of importName) chunkBuffer.push(b);
+        tempImportBuffer.push(moduleName.length);
+        for (const b of moduleName) tempImportBuffer.push(b);
+        tempImportBuffer.push(importName.length);
+        for (const b of importName) tempImportBuffer.push(b);
         
-        chunkBuffer.push(0x00); // import type
-        chunkBuffer.push(0x00); // function signature type index
+        tempImportBuffer.push(0x00); // import type
+        tempImportBuffer.push(0x00); // function signature type index
     }
     
-    const importSectionLength = chunkBuffer.length - preImportSize;
-    chunkBuffer[preImportSize - 1] = Math.floor(importSectionLength / 128);
-    chunkBuffer[preImportSize - 2] = importSectionLength % 128;
+    putConstOnBuffer(chunkBuffer, tempImportBuffer.length);
+    for (const b of tempImportBuffer) chunkBuffer.push(b);
     
     // section Function (0x03)
     chunkBuffer.push(0x03);
@@ -511,36 +508,36 @@ async function assemble(chunk, debuggerEnabled) {
     
     // section Code (0x0A)
     chunkBuffer.push(0x0A);
-    chunkBuffer.push(0x00);
-    chunkBuffer.push(0x01); // function count
     
-    const bodyLengthByte = chunkBuffer.length;
-    chunkBuffer.push(0x00); // body length
-    chunkBuffer.push(0x00); // local decl count
+    const tempCodeBuffer = [];
+    tempCodeBuffer.push(0x01); // function count
+    
+    tempCodeBuffer.push(0x00); // body length
+    tempCodeBuffer.push(0x00); // local decl count
     
     // Handle the link-jump mechanism
-    chunkBuffer.push(0x03); // root loop
-    chunkBuffer.push(0x40); // void
+    tempCodeBuffer.push(0x03); // root loop
+    tempCodeBuffer.push(0x40); // void
     
     const branchTargets = chunk.branchTargets.sort();
     
     for (const branchTarget of branchTargets) {
-        chunkBuffer.push(0x02); // block
-        chunkBuffer.push(0x40); // void
+        tempCodeBuffer.push(0x02); // block
+        tempCodeBuffer.push(0x40); // void
     }
     
     for (let i = 0; i < branchTargets.length; i++) {
         const branchTarget = branchTargets[i];
-        chunkBuffer.push(0x41); // i32.const
+        tempCodeBuffer.push(0x41); // i32.const
         // const value
-        putConstOnBuffer(chunkBuffer, branchTarget);
+        putConstOnBuffer(tempCodeBuffer, branchTarget);
       
-        chunkBuffer.push(0x23); // global.get
-        chunkBuffer.push(registers.indexOf("link")); // global index
+        tempCodeBuffer.push(0x23); // global.get
+        tempCodeBuffer.push(registers.indexOf("link")); // global index
       
-        chunkBuffer.push(0x46); // i32.eq
-        chunkBuffer.push(0x0D); // br_if
-        chunkBuffer.push(i); // break depth
+        tempCodeBuffer.push(0x46); // i32.eq
+        tempCodeBuffer.push(0x0D); // br_if
+        tempCodeBuffer.push(i); // break depth
     }
     
     for (let i = 0; i < chunk.instructions.length; i++) {
@@ -548,31 +545,30 @@ async function assemble(chunk, debuggerEnabled) {
     
         // close block if this is a branch target
         if (branchTargets.includes(i)) {
-            chunkBuffer.push(0x0B); // end
+            tempCodeBuffer.push(0x0B); // end
         }
       
         // process the instruction
-        const res = await assembleInstruction(instruction, chunkBuffer, importList, branchTargets, i);
+        const res = await assembleInstruction(instruction, tempCodeBuffer, importList, branchTargets, i);
         if (!res) {
             console.log(JSON.stringify(instruction));
             return false;
         } 
         if (debuggerEnabled) {
-            chunkBuffer.push(0x10); // call
-            chunkBuffer.push(0x02); // debugger index
+            tempCodeBuffer.push(0x10); // call
+            tempCodeBuffer.push(0x02); // debugger index
         }
     }
     
     // close the root loop
-    chunkBuffer.push(0x0B); // end
+    tempCodeBuffer.push(0x0B); // end
     
     // close function body
-    chunkBuffer.push(0x0B); // end
+    tempCodeBuffer.push(0x0B); // end
     
     // fix up the function size
-    chunkBuffer[bodyLengthByte] = chunkBuffer.length - bodyLengthByte - 1;
-    
-    chunkBuffer[bodyLengthByte - 2] = chunkBuffer[bodyLengthByte] + 2;
+    putConstOnBuffer(chunkBuffer, tempCodeBuffer.length);
+    for (const b of tempCodeBuffer) chunkBuffer.push(b);
     
     return chunkBuffer;
 }
