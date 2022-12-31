@@ -526,32 +526,32 @@ async function assemble(chunk, debuggerEnabled) {
     const tempCodeBuffer = [];
     tempCodeBuffer.push(0x01); // function count
     
-    tempCodeBuffer.push(0x00); // body length
-    tempCodeBuffer.push(0x00); // local decl count
+    const tempFuncBuffer = [];
+    tempFuncBuffer.push(0x00); // local decl count
     
     // Handle the link-jump mechanism
-    tempCodeBuffer.push(0x03); // root loop
-    tempCodeBuffer.push(0x40); // void
+    tempFuncBuffer.push(0x03); // root loop
+    tempFuncBuffer.push(0x40); // void
     
     const branchTargets = chunk.branchTargets.sort();
     
     for (const branchTarget of branchTargets) {
-        tempCodeBuffer.push(0x02); // block
-        tempCodeBuffer.push(0x40); // void
+        tempFuncBuffer.push(0x02); // block
+        tempFuncBuffer.push(0x40); // void
     }
     
     for (let i = 0; i < branchTargets.length; i++) {
         const branchTarget = branchTargets[i];
-        tempCodeBuffer.push(0x41); // i32.const
+        tempFuncBuffer.push(0x41); // i32.const
         // const value
-        putConstOnBuffer(tempCodeBuffer, branchTarget);
+        putConstOnBuffer(tempFuncBuffer, branchTarget);
       
-        tempCodeBuffer.push(0x23); // global.get
-        tempCodeBuffer.push(registers.indexOf("link")); // global index
+        tempFuncBuffer.push(0x23); // global.get
+        tempFuncBuffer.push(registers.indexOf("link")); // global index
       
-        tempCodeBuffer.push(0x46); // i32.eq
-        tempCodeBuffer.push(0x0D); // br_if
-        tempCodeBuffer.push(i); // break depth
+        tempFuncBuffer.push(0x46); // i32.eq
+        tempFuncBuffer.push(0x0D); // br_if
+        tempFuncBuffer.push(i); // break depth
     }
     
     for (let i = 0; i < chunk.instructions.length; i++) {
@@ -559,28 +559,32 @@ async function assemble(chunk, debuggerEnabled) {
     
         // close block if this is a branch target
         if (branchTargets.includes(i)) {
-            tempCodeBuffer.push(0x0B); // end
+            tempFuncBuffer.push(0x0B); // end
         }
       
         // process the instruction
-        const res = await assembleInstruction(instruction, tempCodeBuffer, importList, branchTargets, i);
+        const res = await assembleInstruction(instruction, tempFuncBuffer, importList, branchTargets, i);
         if (!res) {
             console.log(JSON.stringify(instruction));
             return false;
         } 
         if (debuggerEnabled) {
-            tempCodeBuffer.push(0x10); // call
-            tempCodeBuffer.push(0x02); // debugger index
+            tempFuncBuffer.push(0x10); // call
+            tempFuncBuffer.push(0x02); // debugger index
         }
     }
     
     // close the root loop
-    tempCodeBuffer.push(0x0B); // end
+    tempFuncBuffer.push(0x0B); // end
     
     // close function body
-    tempCodeBuffer.push(0x0B); // end
+    tempFuncBuffer.push(0x0B); // end
     
     // fix up the function size
+    putConstOnBuffer(tempCodeBuffer, tempFuncBuffer.length);
+    for (const b of tempFuncBuffer) tempCodeBuffer.push(b);
+    
+    // fix up the section size
     putConstOnBuffer(chunkBuffer, tempCodeBuffer.length);
     for (const b of tempCodeBuffer) chunkBuffer.push(b);
     
