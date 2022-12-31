@@ -503,6 +503,85 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(0x0B); // close block
             break;
         }
+        case "CMP": {
+            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
+            buffer.push(0x6B); // i32.sub
+            
+            // store temporarily in t1
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("t1"));
+            
+            // set relevant flags based on result
+            // PF - parity
+            // set if the number of bits set in result is even
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1"));
+            buffer.push(0x69); // i32.popcnt
+            buffer.push(0x41); // i32.const
+            buffer.push(0x02);
+            buffer.push(0x70); // i32.rem_u
+            buffer.push(0x41); // i32.const
+            buffer.push(0x01);
+            buffer.push(0x73); // i32.xor
+            
+            // update pf flag
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("pf")); 
+            
+            // ZF - zero
+            // set if the result is zero
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1"));
+            buffer.push(0x45); // i32.eqz
+            // update zf flag
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("zf"));
+            
+            // SF - sign
+            // set if the result is signed negative
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1"));
+            buffer.push(0x41); // i32.const
+            buffer.push(0x00);
+            buffer.push(0x48); // i32.lt_s
+            // update sf flag
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("sf"));
+            
+            // CF - carry
+            // set if op 2 is smaller than op 1
+            if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
+            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            buffer.push(0x49); // i32.lt_u
+            // update cf flag
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("cf"));
+            
+            // OF - overflow
+            // set if sign bit of result does not match sign bit of op1
+            
+            // get sign bit of op1
+            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            buffer.push(0x41); // i32.const
+            putConstOnBuffer(buffer, 0x80000000);
+            buffer.push(0x71); // i32.and
+            
+            // get sign bit of result
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1"));
+            buffer.push(0x41); // i32.const
+            putConstOnBuffer(buffer, 0x80000000);
+            buffer.push(0x71); // i32.and
+            
+            // xor to confirm sign bits are different
+            buffer.push(0x73); // i32.xor
+            
+             // update of flag
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("of"));
+            break;
+        }
         default: {
             console.log("Failed to assemble WASM chunk, instruction has unknown mnemonic!");
             return false; 
