@@ -413,6 +413,64 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             break;
         } 
+        case "TEST": {
+            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
+            buffer.push(0x71); // i32.and
+            
+            // store temporarily in t1
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("t1"));
+            
+            // reset of and cf flags
+            buffer.push(0x41); // i32.const
+            buffer.push(0x00);
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("of"));
+            buffer.push(0x41); // i32.const
+            buffer.push(0x00);
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("cf"));
+            
+            // set relevant flags based on result
+            // PF - parity
+            // set if the number of bits set in result is even
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1"));
+            buffer.push(0x69); // i32.popcnt
+            buffer.push(0x41); // i32.const
+            buffer.push(0x02);
+            buffer.push(0x70); // i32.rem_u
+            buffer.push(0x41); // i32.const
+            buffer.push(0x01);
+            buffer.push(0x73); // i32.xor
+            
+            // update pf flag
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("pf")); 
+            
+            // ZF - zero
+            // set if the result is zero
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1"));
+            buffer.push(0x45); // i32.eqz
+            // update zf flag
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("zf"));
+            
+            // SF - sign
+            // set if the result is signed negative
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1"));
+            buffer.push(0x41); // i32.const
+            buffer.push(0x00);
+            buffer.push(0x48); // i32.lt_s
+            // update sf flag
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("sf"));
+            
+            break;
+        }
         case "LEA": {
             console.log(instruction);
             if (!instruction.operandSet[1].indirect) {
