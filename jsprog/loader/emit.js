@@ -333,6 +333,17 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(0x24); // global.set
             buffer.push(registers.indexOf("zf"));
             
+            // SF - sign
+            // set if the result is signed negative
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1"));
+            buffer.push(0x41); // i32.const
+            buffer.push(0x00);
+            buffer.push(0x48); // i32.lt_s
+            // update sf flag
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("sf"));
+            
             // restore from t1 and put into destination operand
             buffer.push(0x23); // global.get
             buffer.push(registers.indexOf("t1"));
