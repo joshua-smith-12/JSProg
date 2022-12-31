@@ -13,7 +13,7 @@ the cost is efficiency as a decent number of opcodes are spent setting up blocks
 there are options for microoptimizations. one already implemented is to place the branch to the first instruction first in the branch list.
 it might be possible to use br_table for this with some additional work.
 */
-const registers = ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi", "link", "flags", "t1", "t2"];
+const registers = ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi", "link", "cf", "pf", "zf", "sf", "of", "af", "t1", "t2"];
 
 function sizedLoad(buffer, size) {
     if (size === 32) {
@@ -285,56 +285,28 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(0x24); // global.set
             buffer.push(registers.indexOf("t1"));
             
-            // reset relevant flags
-            buffer.push(0x23); // global.get
-            buffer.push(registers.indexOf("flags"));
-            buffer.push(0x41); // i32.const
-            putConstOnBuffer(buffer, 63274); // bitmask
-            buffer.push(0x71); // i32.and
-            buffer.push(0x24); // global.set
-            buffer.push(registers.indexOf("flags"));
-            
-            // compute flags
+            // calculate and set flags
             // CF - carry
             // set if a+b overflows unsigned
-            // detect by checking if result is less than both a and b (unsigned)
-            buffer.push(0x02); // block cf_not_set
-            buffer.push(0x40);
-            buffer.push(0x02); // block cf_test_2
-            buffer.push(0x40);
-            buffer.push(0x02); // block cf_test_1
-            buffer.push(0x40);
+            // do not need to reset flag as it is always set or unset by this code
             
+            // detect by checking if result is less than both a and b (unsigned)
             // compare to first operand
             buffer.push(0x23); // global.get
             buffer.push(registers.indexOf("t1"));
             if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             buffer.push(0x49); // i32.lt_u
-            buffer.push(0x0D); // br_if
-            buffer.push(0x00); // cf_test_1
-            buffer.push(0x0C); // br
-            buffer.push(0x02); // cf_not_set
-            buffer.push(0x0B); // end cf_test_1
             
             // compare to second operand
             buffer.push(0x23); // global.get
             buffer.push(registers.indexOf("t1"));
             if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
             buffer.push(0x49); // i32.lt_u
-            buffer.push(0x0D); // br_if
-            buffer.push(0x00); // cf_test_2
-            buffer.push(0x0C); // br
-            buffer.push(0x01); // cf_not_set
-            buffer.push(0x0B); // end cf_test_2
             
-            // both tests passed, update flags bit 0
-            buffer.push(0x23); // global.get
-            buffer.push(registers.indexOf("flags"));
-            buffer.push(0x41); // i32.const
-            buffer.push(0x01); // bit 0 set
-            buffer.push(0x72); // i32.or
+            // take logical AND of both results and store in cf
+            buffer.push(0x71); // i32.and
             buffer.push(0x24); // global.set
-            buffer.push(registers.indexOf("flags"));
+            buffer.push(registers.indexOf("cf"));
             
             // PF - parity
             // set if the number of bits set in result is even
@@ -347,15 +319,19 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(0x41); // i32.const
             buffer.push(0x01);
             buffer.push(0x73); // i32.xor
-            buffer.push(0x41); // i32.const
-            buffer.push(0x04); // for setting bit 2
-            buffer.push(0x6C); // i32.mul
-            // update flags bit 2
-            buffer.push(0x23); // global.get
-            buffer.push(registers.indexOf("flags"));
-            buffer.push(0x72); // i32.or
+            
+            // update pf flag
             buffer.push(0x24); // global.set
-            buffer.push(registers.indexOf("flags")); 
+            buffer.push(registers.indexOf("pf")); 
+            
+            // ZF - zero
+            // set if the result is zero
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1"));
+            buffer.push(0x45); // i32.eqz
+            // update zf flag
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("zf"));
             
             // restore from t1 and put into destination operand
             buffer.push(0x23); // global.get
