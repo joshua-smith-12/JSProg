@@ -221,7 +221,10 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
                 // call function
                 buffer.push(0x10); // call
                 const index = imports.findIndex(x => x === `chunk${instruction.operandSet[1].val}::defaultExport`);
-                if (index === -1) return false;
+                if (index === -1) {
+                    console.log("Failed to identify import for chunk in instruction.");
+                    return false;
+                } 
                 buffer.push(index);
             } else {
                 console.log("Non-immediate jump targets are not yet supported.");
