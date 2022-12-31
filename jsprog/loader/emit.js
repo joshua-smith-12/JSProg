@@ -406,12 +406,12 @@ function putConstOnBuffer(chunkBuffer, constValue) {
     let uint = constValue >>> 0;
     while (true) {
         const currByte = uint & 0x7F;
-        uint = uint >> 7;
+        uint = uint >>> 7;
         if (uint === 0) {
             byteBuffer.push(currByte);
             break;
         } else {
-            byteBuffer.push(currByte & 0x80);
+            byteBuffer.push(currByte | 0x80);
         }
     }
     
