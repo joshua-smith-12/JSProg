@@ -1,4 +1,4 @@
-const fs = require('fs').promises;
+const fs = require('fs');
 const readline = require('readline-sync');
 
 const mem = new WebAssembly.Memory({initial: 1});
@@ -71,8 +71,8 @@ function listImports(chunk) {
   return importList;
 }
 
-async function runChunk(module, version, chunkId) {
-  const chunkDetail = JSON.parse(await fs.readFile(`./chunks/${module}@${version}/chunks.${chunkId}.json`));
+function runChunk(module, version, chunkId) {
+  const chunkDetail = JSON.parse(fs.readFileSync(`./chunks/${module}@${version}/chunks.${chunkId}.json`));
   
   const importData = {
     js: { mem },
@@ -96,24 +96,24 @@ async function runChunk(module, version, chunkId) {
       debugHandler(chunkDetail);
       if (impModule.startsWith("chunk")) {
         const nextChunkId = impModule.replace("chunk", "");
-        await runChunk(module, version, nextChunkId);
+        runChunk(module, version, nextChunkId);
       } else {
         console.log("Library function " + imp + " has no definition.");
       }
     };
   }
   
-  const chunkData = await fs.readFile(`./chunks/${module}@${version}/chunks.${chunkId}.wasm`);
+  const chunkData = fs.readFileSync(`./chunks/${module}@${version}/chunks.${chunkId}.wasm`);
   
-  const instance = await WebAssembly.instantiate(chunkData, importData);
-  instance.instance.exports.defaultExport();
+  WebAssembly.instantiate(chunkData, importData)
+  .then((result) => result.instance.exports.defaultExport());
 }
 
 async function doDebug() {
   const module = readline.question("What module should I run? ");
   const version = readline.question("What is the version of the module? ");
     
-  await runChunk(module, version, 0);
+  runChunk(module, version, 0);
 }
 
 doDebug();
