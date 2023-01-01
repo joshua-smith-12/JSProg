@@ -52,7 +52,11 @@ async function doDebug() {
     system: {
       readSegment: () => { return; }, 
       writeSegment: () => { return; },
-      debugger: debugHandler
+      debugger: () => {
+        const instruction = chunkDetail.instructions[t1.value];
+        console.log("Executed instruction " + instruction.mnemonic + " at virtual address " + instruction.virtualAddress.toString(16).toUpperCase());
+        debugHandler();
+      }
     }
   };
   const importList = listImports(chunkDetail);
