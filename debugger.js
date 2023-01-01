@@ -59,8 +59,8 @@ async function doDebug() {
   const chunkDetail = JSON.parse(await fs.readFile(`./chunks/${module}.${version}/chunks.0.json`));
   
   const importData = {
-    js: { mem }
-    registers: { eax, ebx, ecx, edx, esi, edi, esp, ebp, link, t1, t2, cf, zf, sf, pf, af, of: of_ }
+    js: { mem },
+    registers: { eax, ebx, ecx, edx, esi, edi, esp, ebp, link, t1, t2, cf, zf, sf, pf, af, of: of_ },
     system: {
       readSegment: () => { return; }, 
       writeSegment: () => { return; },
