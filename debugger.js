@@ -56,7 +56,7 @@ async function doDebug() {
   const module = await question("What module should I run?");
   const version = await question("What is the version of the module?");
     
-  const chunkDetail = JSON.parse(await fs.readFile(`./chunks/${module}.${version}/chunks.0.json`));
+  const chunkDetail = JSON.parse(await fs.readFile(`./chunks/${module}@${version}/chunks.0.json`));
   
   const importData = {
     js: { mem },
