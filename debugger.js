@@ -106,8 +106,10 @@ function runChunk(module, version, chunkId) {
   
   const chunkData = fs.readFileSync(`./chunks/${module}@${version}/chunks.${chunkId}.wasm`);
   
-  WebAssembly.instantiate(chunkData, importData)
-  .then((result) => result.instance.exports.defaultExport());
+  const wasmModule = new WebAssembly.Module(chunkData);
+  const wasmInstance = new WebAssembly.Instance(wasmModule, importData);
+  
+  wasmInstance.exports.defaultExport();
 }
 
 async function doDebug() {
