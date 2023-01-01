@@ -46,18 +46,19 @@ function showSystem() {
 
 function showStack() {
   let rowTop = esp.value;
+  console.log("ESP=" + rowTop.toString(16).toUpperCase().padStart(8, '0'));
   for (let i = 0; i < 4; i++) {
     const rowBottom = Math.max(0, rowTop - 16);
     if (rowBottom === rowTop) break;
     
-    const stackRow = new Uint8Array(mem.buffer, rowBottom, 16);
-    let row = "0x" + rowBottom.toString(16).toUpperCase().padStart(8, '0') + "  ";
-    for (const b of stackRow) {
-      row = row + "0x" + b.toString(16).toUpperCase().padStart(2, '0') + " ";
+    const stackRow = new Uint32Array(mem.buffer, rowBottom, Math.min(4, (rowTop - rowBottom) / 4));
+    let row = "ESP - 0x" + (i * 16).toString(16).toUpperCase().padStart(2, '0') + "  ";
+    for (const dw of stackRow) {
+      row = row + "0x" + dw.toString(16).toUpperCase().padStart(8, '0') + " ";
     }
     console.log(row);
     
-    rowTop = rowTop - 16;
+    rowTop = Math.max(0, rowTop - 16);
   }
 }
 
