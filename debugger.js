@@ -56,29 +56,31 @@ async function doDebug() {
   const module = await question("What module should I run?");
   const version = await question("What is the version of the module?");
     
-  let chunkDetail = JSON.parse(await fs.readFile(`./chunks/${module}.${version}/chunks.0.json`));
+  const chunkDetail = JSON.parse(await fs.readFile(`./chunks/${module}.${version}/chunks.0.json`));
   
-  while (true) {
-    const importData = {
-      js: { mem }
-      registers: { eax, ebx, ecx, edx, esi, edi, esp, ebp, link, t1, t2, cf, zf, sf, pf, af, of: of_ }
-      system: {
-        readSegment: () => { return; }, 
-        writeSegment: () => { return; },
-        debugger: debugHandler
-      }
-    };
-    const importList = listImports(chunkDetail);
-    for (const imp of listImports) {
-      const module = imp.split("::")[0];
-      const name = imp.split("::")[1];
-      importData[module] = importData[module] || {};
-      importData[module][name] = () => {
-        console.log("Invoked function " + imp);
-        debugHandler();
-      };
+  const importData = {
+    js: { mem }
+    registers: { eax, ebx, ecx, edx, esi, edi, esp, ebp, link, t1, t2, cf, zf, sf, pf, af, of: of_ }
+    system: {
+      readSegment: () => { return; }, 
+      writeSegment: () => { return; },
+      debugger: debugHandler
     }
+  };
+  const importList = listImports(chunkDetail);
+  for (const imp of listImports) {
+    const module = imp.split("::")[0];
+    const name = imp.split("::")[1];
+    importData[module] = importData[module] || {};
+    importData[module][name] = () => {
+      console.log("Invoked function " + imp);
+      debugHandler();
+    };
   }
+  
+  const chunkData = await fs.readFile(`./chunks/${module}.${version}/chunks.0.wasm`, 'binary');
+  
+  const instance = WebAssembly.instantiate(Buffer.from(chunkData), importData);
 }
 
 doDebug();
