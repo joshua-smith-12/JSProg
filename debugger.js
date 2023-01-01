@@ -1,5 +1,6 @@
 const fs = require('fs');
 const readline = require('readline-sync');
+const { conditionalJumpOps } = require('jsprog/loader/utils.js');
 
 const mem = new WebAssembly.Memory({initial: 1});
   
