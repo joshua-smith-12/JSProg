@@ -80,12 +80,12 @@ async function doDebug() {
     };
   }
   
-  const chunkData = await fs.readFile(`./chunks/${module}@${version}/chunks.0.wasm`, 'binary');
+  const chunkData = await fs.readFile(`./chunks/${module}@${version}/chunks.0.wasm`);
   console.log(chunkData[16]);
   console.log(chunkData[17]);
   console.log(chunkData[18]);
   
-  const instance = await WebAssembly.instantiate(Buffer.from(chunkData), importData);
+  const instance = await WebAssembly.instantiate(chunkData, importData);
 }
 
 doDebug();
