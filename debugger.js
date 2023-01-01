@@ -23,7 +23,7 @@ const sf = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const pf = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const af = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 
-function debugHandler() {
+function debugHandler(chunkDetail) {
   const instruction = chunkDetail.instructions[t1.value];
   const decoded = decodeInstruction(instruction);
   console.log("0x" + instruction.virtualAddress.toString(16).toUpperCase() + ": " + decoded);
@@ -84,7 +84,7 @@ async function doDebug() {
       readSegment: () => { return; }, 
       writeSegment: () => { return; },
       debugger: () => {
-        debugHandler();
+        debugHandler(chunkDetail);
       }
     }
   };
@@ -95,7 +95,7 @@ async function doDebug() {
     importData[module] = importData[module] || {};
     importData[module][name] = () => {
       console.log("Waiting to invoke function " + imp);
-      debugHandler();
+      debugHandler(chunkDetail);
     };
   }
   
