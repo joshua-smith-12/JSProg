@@ -43,6 +43,7 @@ function debugHandler() {
 }
 
 function listImports(chunk) {
+  const importList = [];
   for (const instruction of chunk.instructions) { 
     if ((instruction.mnemonic === "JMP" || instruction.mnemonic === "CALL" || conditionalJumpOps.includes(instruction.mnemonic)) && instruction.operandSet[0].type !== 'reg' && instruction.operandSet[1].val !== -1 && !importList.includes(`chunk${instruction.operandSet[1].val}::defaultExport`)) {
       importList.push(`chunk${instruction.operandSet[1].val}::defaultExport`);
@@ -50,6 +51,7 @@ function listImports(chunk) {
       importList.push(instruction.operandSet[0].val);
     }
   }
+  return importList;
 }
 
 async function doDebug() {
@@ -68,7 +70,7 @@ async function doDebug() {
     }
   };
   const importList = listImports(chunkDetail);
-  for (const imp of listImports) {
+  for (const imp of importList) {
     const module = imp.split("::")[0];
     const name = imp.split("::")[1];
     importData[module] = importData[module] || {};
