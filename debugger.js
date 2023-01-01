@@ -28,6 +28,18 @@ function debugHandler() {
   console.log(response);
 }
 
+function decodeInstruction(instruction) {
+  switch (instruction.mnemonic) {
+    case "JMP": {
+      const destinationChunk = instruction.operandSet[1].val;
+      const destinationInstr = instruction.operandSet[2].val;
+      if (destinationChunk === -1) return "JMP this@" + destinationInstr;
+      else return "JMP chunk" + destinationChunk + "@" + destinationInstr;
+    }
+    default: return instruction.mnemonic; 
+  }
+}
+
 function listImports(chunk) {
   const importList = [];
   for (const instruction of chunk.instructions) { 
@@ -54,7 +66,8 @@ async function doDebug() {
       writeSegment: () => { return; },
       debugger: () => {
         const instruction = chunkDetail.instructions[t1.value];
-        console.log("Executed instruction " + instruction.mnemonic + " at virtual address 0x" + instruction.virtualAddress.toString(16).toUpperCase());
+        const decoded = decodeInstruction(instruction);
+        console.log("0x" + instruction.virtualAddress.toString(16).toUpperCase() + ": " + decoded);
         debugHandler();
       }
     }
