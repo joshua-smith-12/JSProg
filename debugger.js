@@ -24,26 +24,69 @@ const sf = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const pf = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const af = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 
+let defaultCommand = null;
+
+function showRegisters() {
+  console.log("EAX        EBX        ECX        EDX");
+  console.log("0x" + eax.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + ebx.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + ecx.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + edx.value.toString(16).toUpperCase().padStart(8, '0'));
+      
+  console.log("ESI        EDI        EBP        ESP");
+  console.log("0x" + esi.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + edi.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + ebp.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + esp.value.toString(16).toUpperCase().padStart(8, '0'));
+}
+
+function showFlags() {
+  console.log("CF   OF   SF   ZF   PF   AF");
+  console.log("0x" + cf.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + of_.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + sf.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + zf.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + pf.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + af.value.toString(16).toUpperCase().padStart(2, '0'));
+}
+
+function showSystem() {
+  console.log("LINK       T1         T2");
+  console.log("0x" + link.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + t1.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + t2.value.toString(16).toUpperCase().padStart(8, '0'));
+}
+
+function showStack() {
+  let rowTop = esp.value;
+  for (let i = 0; i < 4; i++) {
+    const rowBottom = Math.max(0, rowTop - 16);
+    if (rowBottom === rowTop) break;
+    
+    const stackRow = new Uint8Array(mem.buffer, rowBottom, 16);
+    let row = "0x" + rowBottom.toString(16).toUpperCase().padStart(8, '0') + "  ";
+    for (const b of stackRow) {
+      row = row + "0x" + b.toString(16).toUpperCase().padStart(2, '0') + " ";
+    }
+    console.log(row);
+    
+    rowTop = rowTop - 16;
+  }
+}
+
 function debugHandler(chunkDetail, showAddr = true) {
   const instruction = chunkDetail.instructions[t1.value];
   const decoded = decodeInstruction(instruction);
   if (showAddr) console.log("0x" + instruction.virtualAddress.toString(16).toUpperCase() + ": " + decoded);
+  
+  let command = defaultCommand || readline.question("> ");
   while (true) {
-    const response = readline.question("> ");
-    if (response === "" || response === "continue") {
+    if (command === "" || command === "continue") {
       break;
-    } else if (response === "show reg") {
-      console.log("EAX        EBX        ECX        EDX");
-      console.log("0x" + eax.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + ebx.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + ecx.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + edx.value.toString(16).toUpperCase().padStart(8, '0'));
-      
-      console.log("ESI        EDI        EBP        ESP");
-      console.log("0x" + esi.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + edi.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + ebp.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + esp.value.toString(16).toUpperCase().padStart(8, '0'));
-    } else if (response === "show flags") {
-      console.log("CF   OF   SF   ZF   PF   AF");
-      console.log("0x" + cf.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + of_.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + sf.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + zf.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + pf.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + af.value.toString(16).toUpperCase().padStart(2, '0'));
-    } else if (response === "show sys") {
+    } else if (command === "show reg") {
+      showRegisters();
+    } else if (command === "show flags") {
+      showFlags();
+    } else if (command === "show sys") {
+      showSystem();
+    } else if (command === "show stack") {
+      showStack();
+    } else if (command === "show all") {
+      showRegisters();
+      showFlags();
+      showSystem();
+      showStack();
     } else {
-    } 
+    }
+    
+    command = readline.question("> ");
   }
   if (showAddr) console.log("Resuming execution from 0x" + instruction.virtualAddress.toString(16).toUpperCase());
 } 
