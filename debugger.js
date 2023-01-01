@@ -27,10 +27,10 @@ function debugHandler() {
   const response = readline.question("> ");
   if (response === "show reg") {
     console.log("EAX        EBX        ECX        EDX");
-    console.log("0x" + eax.value.toString(16).toUpperCase() + " 0x" + ebx.value.toString(16).toUpperCase() + " 0x" + ecx.value.toString(16).toUpperCase() + " 0x" + edx.value.toString(16).toUpperCase());
+    console.log("0x" + eax.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + ebx.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + ecx.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + edx.value.toString(16).toUpperCase().padStart(8, '0'));
     
     console.log("ESI        EDI        EBP        ESP");
-    console.log("0x" + esi.value.toString(16).toUpperCase() + " 0x" + edi.value.toString(16).toUpperCase() + " 0x" + ebp.value.toString(16).toUpperCase() + " 0x" + esp.value.toString(16).toUpperCase());
+    console.log("0x" + esi.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + edi.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + ebp.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + esp.value.toString(16).toUpperCase().padStart(8, '0'));
   } else if (response === "show flags") {
   } else if (response === "show sys") {
   } else {
