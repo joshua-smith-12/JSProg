@@ -71,11 +71,8 @@ function listImports(chunk) {
   return importList;
 }
 
-async function doDebug() {
-  const module = readline.question("What module should I run? ");
-  const version = readline.question("What is the version of the module? ");
-    
-  const chunkDetail = JSON.parse(await fs.readFile(`./chunks/${module}@${version}/chunks.0.json`));
+async function runChunk(module, version, chunkId) {
+  const chunkDetail = JSON.parse(await fs.readFile(`./chunks/${module}@${version}/chunks.${chunkId}.json`));
   
   const importData = {
     js: { mem },
@@ -88,21 +85,35 @@ async function doDebug() {
       }
     }
   };
+  
   const importList = listImports(chunkDetail);
   for (const imp of importList) {
-    const module = imp.split("::")[0];
+    const impModule = imp.split("::")[0];
     const name = imp.split("::")[1];
-    importData[module] = importData[module] || {};
-    importData[module][name] = () => {
+    importData[impModule] = importData[impModule] || {};
+    importData[impModule][name] = () => {
       console.log("Waiting to invoke function " + imp);
       debugHandler(chunkDetail);
+      if (impModule.startsWith("chunk")) {
+        const nextChunkId = impModule.replace("chunk", "");
+        await runChunk(module, version, nextChunkId);
+      } else {
+        console.log("Library function " + imp + " has no definition.");
+      }
     };
   }
   
-  const chunkData = await fs.readFile(`./chunks/${module}@${version}/chunks.0.wasm`);
+  const chunkData = await fs.readFile(`./chunks/${module}@${version}/chunks.${chunkId}.wasm`);
   
   const instance = await WebAssembly.instantiate(chunkData, importData);
   instance.instance.exports.defaultExport();
+}
+
+async function doDebug() {
+  const module = readline.question("What module should I run? ");
+  const version = readline.question("What is the version of the module? ");
+    
+  await runChunk(module, version, 0);
 }
 
 doDebug();
