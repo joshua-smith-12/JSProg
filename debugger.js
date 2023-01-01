@@ -83,8 +83,7 @@ async function doDebug() {
   const chunkData = await fs.readFile(`./chunks/${module}@${version}/chunks.0.wasm`);
   
   const instance = await WebAssembly.instantiate(chunkData, importData);
-  
-  console.log(instance);
+  instance.instance.exports.defaultExport();
 }
 
 doDebug();
