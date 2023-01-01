@@ -71,6 +71,8 @@ function debugHandler(chunkDetail, showAddr = true) {
   while (true) {
     if (command === "" || command === "continue") {
       break;
+    } else if (command.startsWith("default")) {
+      defaultCommand = command.replace("default ", "");
     } else if (command === "show reg") {
       showRegisters();
     } else if (command === "show flags") {
@@ -81,10 +83,14 @@ function debugHandler(chunkDetail, showAddr = true) {
       showStack();
     } else if (command === "show all") {
       showRegisters();
+      console.log("");
       showFlags();
+      console.log("");
       showSystem();
+      console.log("");
       showStack();
     } else {
+      console.log("Unrecognized command " + command);
     }
     
     command = readline.question("> ");
