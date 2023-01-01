@@ -1,7 +1,7 @@
 const fs = require('fs').promises;
 const { promisify } = require('util');
 const rl = require('readline');
-const readline = readline.createInterface({
+const readline = rl.createInterface({
   input: process.stdin,
   output: process.stdout
 });
