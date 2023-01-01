@@ -106,7 +106,20 @@ function decodeInstruction(instruction) {
       if (destinationChunk === -1) return "JMP this@" + destinationInstr;
       else return "JMP chunk" + destinationChunk + "@" + destinationInstr;
     }
-    default: return instruction.mnemonic; 
+    default: {
+      let res = instruction.mnemonic + " "; 
+      for(const op of instruction.operandSet) {
+        if (op.indirect) res += "[";
+        if (op.type === imm) res += op.val;
+        else if (op.type === reg) res += ["eax", "ecx", "edx", "ebx", "ebp", "esp", "esi", "edi"][op.val];
+        else console.log(op);
+        if (op.indirect) res += "]";
+        res += ", ";
+      }
+      
+      res = res.substring(0, res.length - 2);
+      return res;
+    } 
   }
 }
 
