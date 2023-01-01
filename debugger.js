@@ -1,19 +1,5 @@
 const fs = require('fs').promises;
-const { promisify } = require('util');
-const rl = require('readline');
-const readline = rl.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
-
-// Prepare readline.question for promisification
-readline.question[promisify.custom] = (question) => {
-  return new Promise((resolve) => {
-    readline.question(question, resolve);
-  });
-};
-
-const question = promisify(readline.question);
+const readline = require('readline-sync');
 
 const mem = new WebAssembly.Memory({initial: 1});
   
@@ -38,8 +24,8 @@ const pf = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const af = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 
 function debugHandler() {
-  question("> ")
-  .then((response) => console.log(response));
+  const response = readline.question("> ");
+  console.log(response);
 }
 
 function listImports(chunk) {
@@ -55,8 +41,8 @@ function listImports(chunk) {
 }
 
 async function doDebug() {
-  const module = await question("What module should I run?");
-  const version = await question("What is the version of the module?");
+  const module = readline.question("What module should I run? ");
+  const version = readline.question("What is the version of the module? ");
     
   const chunkDetail = JSON.parse(await fs.readFile(`./chunks/${module}@${version}/chunks.0.json`));
   
