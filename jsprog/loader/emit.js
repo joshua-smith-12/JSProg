@@ -756,13 +756,8 @@ async function assemble(chunk, debuggerEnabled) {
         if (branchTargets.includes(i)) {
             tempFuncBuffer.push(0x0B); // end
         }
-      
-        // process the instruction
-        const res = await assembleInstruction(instruction, tempFuncBuffer, importList, branchTargets, i);
-        if (!res) {
-            console.log(JSON.stringify(instruction));
-            return false;
-        } 
+        
+        // include a call to the debugger if it is enabled
         if (debuggerEnabled) {
             tempFuncBuffer.push(0x41); // i32.const
             putConstOnBuffer(tempFuncBuffer, i);
@@ -771,6 +766,13 @@ async function assemble(chunk, debuggerEnabled) {
             tempFuncBuffer.push(0x10); // call
             tempFuncBuffer.push(0x02); // debugger index
         }
+      
+        // process the instruction
+        const res = await assembleInstruction(instruction, tempFuncBuffer, importList, branchTargets, i);
+        if (!res) {
+            console.log(JSON.stringify(instruction));
+            return false;
+        } 
     }
     
     // close the root loop

@@ -54,7 +54,7 @@ async function doDebug() {
       writeSegment: () => { return; },
       debugger: () => {
         const instruction = chunkDetail.instructions[t1.value];
-        console.log("Executed instruction " + instruction.mnemonic + " at virtual address " + instruction.virtualAddress.toString(16).toUpperCase());
+        console.log("Executed instruction " + instruction.mnemonic + " at virtual address 0x" + instruction.virtualAddress.toString(16).toUpperCase());
         debugHandler();
       }
     }
