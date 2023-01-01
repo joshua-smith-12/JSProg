@@ -24,18 +24,28 @@ const pf = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const af = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 
 function debugHandler() {
-  const response = readline.question("> ");
-  if (response === "show reg") {
-    console.log("EAX        EBX        ECX        EDX");
-    console.log("0x" + eax.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + ebx.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + ecx.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + edx.value.toString(16).toUpperCase().padStart(8, '0'));
-    
-    console.log("ESI        EDI        EBP        ESP");
-    console.log("0x" + esi.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + edi.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + ebp.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + esp.value.toString(16).toUpperCase().padStart(8, '0'));
-  } else if (response === "show flags") {
-  } else if (response === "show sys") {
-  } else {
-  } 
-}
+  const instruction = chunkDetail.instructions[t1.value];
+  const decoded = decodeInstruction(instruction);
+  console.log("0x" + instruction.virtualAddress.toString(16).toUpperCase() + ": " + decoded);
+  while (true) {
+    const response = readline.question("> ");
+    if (response === "" || response === "continue") {
+      break;
+    } else if (response === "show reg") {
+      console.log("EAX        EBX        ECX        EDX");
+      console.log("0x" + eax.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + ebx.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + ecx.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + edx.value.toString(16).toUpperCase().padStart(8, '0'));
+      
+      console.log("ESI        EDI        EBP        ESP");
+      console.log("0x" + esi.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + edi.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + ebp.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + esp.value.toString(16).toUpperCase().padStart(8, '0'));
+    } else if (response === "show flags") {
+      console.log("CF   OF   SF   ZF   PF   AF");
+      console.log("0x" + cf.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + of_.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + sf.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + zf.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + pf.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + af.value.toString(16).toUpperCase().padStart(2, '0'));
+    } else if (response === "show sys") {
+    } else {
+    } 
+  }
+  console.log("Resuming execution from 0x" + instruction.virtualAddress.toString(16).toUpperCase());
+} 
 
 function decodeInstruction(instruction) {
   switch (instruction.mnemonic) {
@@ -74,9 +84,6 @@ async function doDebug() {
       readSegment: () => { return; }, 
       writeSegment: () => { return; },
       debugger: () => {
-        const instruction = chunkDetail.instructions[t1.value];
-        const decoded = decodeInstruction(instruction);
-        console.log("0x" + instruction.virtualAddress.toString(16).toUpperCase() + ": " + decoded);
         debugHandler();
       }
     }
@@ -87,7 +94,7 @@ async function doDebug() {
     const name = imp.split("::")[1];
     importData[module] = importData[module] || {};
     importData[module][name] = () => {
-      console.log("Invoked function " + imp);
+      console.log("Waiting to invoke function " + imp);
       debugHandler();
     };
   }
