@@ -24,10 +24,10 @@ const sf = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const pf = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const af = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 
-function debugHandler(chunkDetail) {
+function debugHandler(chunkDetail, showAddr = true) {
   const instruction = chunkDetail.instructions[t1.value];
   const decoded = decodeInstruction(instruction);
-  console.log("0x" + instruction.virtualAddress.toString(16).toUpperCase() + ": " + decoded);
+  if (showAddr) console.log("0x" + instruction.virtualAddress.toString(16).toUpperCase() + ": " + decoded);
   while (true) {
     const response = readline.question("> ");
     if (response === "" || response === "continue") {
@@ -45,7 +45,7 @@ function debugHandler(chunkDetail) {
     } else {
     } 
   }
-  console.log("Resuming execution from 0x" + instruction.virtualAddress.toString(16).toUpperCase());
+  if (showAddr) console.log("Resuming execution from 0x" + instruction.virtualAddress.toString(16).toUpperCase());
 } 
 
 function decodeInstruction(instruction) {
@@ -94,7 +94,7 @@ function runChunk(module, version, chunkId) {
     importData[impModule] = importData[impModule] || {};
     importData[impModule][name] = () => {
       console.log("Waiting to invoke function " + imp);
-      debugHandler(chunkDetail);
+      debugHandler(chunkDetail, false);
       if (impModule.startsWith("chunk")) {
         const nextChunkId = impModule.replace("chunk", "");
         runChunk(module, version, nextChunkId);
