@@ -101,13 +101,16 @@ function debugHandler(chunkDetail, showAddr = true) {
     
     command = readline.question("> ");
   }
-  if (showAddr) console.log("Resuming execution from 0x" + instruction.virtualAddress.toString(16).toUpperCase());
 } 
 
 function decodeInstruction(instruction) {
   switch (instruction.mnemonic) {
     case "CALL":
-    case "JMP": {
+    case "JMP": 
+    case "JE":
+    case "JZ":
+    case "JNE":
+    case "JNZ": {
       const destinationChunk = instruction.operandSet[1].val;
       const destinationInstr = instruction.operandSet[2].val;
       if (destinationChunk === -1) return instruction.mnemonic + " this@" + destinationInstr;
