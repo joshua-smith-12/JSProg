@@ -784,10 +784,14 @@ async function assemble(chunk, debuggerEnabled) {
         }
       
         // process the instruction
-        const res = await assembleInstruction(instruction, tempFuncBuffer, importList, branchTargets, i);
-        if (!res) {
-            console.log(JSON.stringify(instruction));
-            return false;
+        let res = false;
+        try {
+            res = await assembleInstruction(instruction, tempFuncBuffer, importList, branchTargets, i);
+        } finally { 
+            if (!res) {
+                console.log(JSON.stringify(instruction));
+                return false;
+            } 
         } 
     }
     
