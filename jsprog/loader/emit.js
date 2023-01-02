@@ -659,6 +659,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(registers.indexOf("cf"));
             
             // reload original and shl
+            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
             buffer.push(0x74); // i32.shl
             
