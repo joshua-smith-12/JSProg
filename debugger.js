@@ -116,7 +116,6 @@ function debugHandler(chunkDetail, showAddr = true) {
       defaultCommand = command.replace("default ", "");
     } else if (command.startsWith("inspect")) {
       inspectMemory(command.replace("inspect "), "");
-    } 
     } else if (command === "show reg") {
       showRegisters();
     } else if (command === "show flags") {
