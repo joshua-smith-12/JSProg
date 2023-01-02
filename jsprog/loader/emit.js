@@ -297,7 +297,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
                 
                 if (instruction.operandSet[1].val === -1) {
                     // identify call depth and branch to the outer loop
-                    const numBlocks = targets.filter(x => x > instrIndex).length;
+                    const numBlocks = targets.filter(x => x > instrIndex).length + 1;
                     buffer.push(0x0C); // br
                     putConstOnBuffer(buffer, numBlocks);
                 } else { 
