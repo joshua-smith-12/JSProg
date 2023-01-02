@@ -482,6 +482,41 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             break;
         }
+        case "OR": {
+            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
+            buffer.push(0x72); // i32.or
+            
+            // store temporarily in t1
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("t1"));
+            
+            // reset of and cf flags
+            buffer.push(0x41); // i32.const
+            buffer.push(0x00);
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("of"));
+            buffer.push(0x41); // i32.const
+            buffer.push(0x00);
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("cf"));
+            
+            // set relevant flags based on result
+            // PF - parity
+            setParityFlag(buffer); 
+            
+            // ZF - zero
+            setZeroFlag(buffer);
+            
+            // SF - sign
+            setSignFlag(buffer);
+            
+            // restore from t1 and put into destination operand
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1"));
+            if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            break;
+        }
         case "TEST": {
             if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
