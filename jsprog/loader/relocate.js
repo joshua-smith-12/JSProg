@@ -47,7 +47,7 @@ module.exports = {
                 
                 if (relocType === 0) continue;
                 
-                const virtualAddress = blockPage + relocOffset + header.optionalHeader.imagePreferredBase;
+                const virtualAddress = blockPage + relocOffset + virtualBase;
                 const sectionIndex = sectionTables.findIndex(x => x.addrStart <= virtualAddress && x.addrEnd >= virtualAddress);
                 if (sectionIndex === -1) {
                     console.log("No section found for relocation at virtual address 0x" + virtualAddress.toString(16).toUpperCase().padStart(8, '0'));
