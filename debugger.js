@@ -36,7 +36,7 @@ function showRegisters() {
 
 function showFlags() {
   console.log("CF   OF   SF   ZF   PF   AF");
-  console.log("0x" + cf.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + of_.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + sf.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + zf.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + pf.value.toString(16).toUpperCase().padStart(2, '0') + " 0x" + af.value.toString(16).toUpperCase().padStart(2, '0'));
+  console.log("0x" + (cf.value !== 0 ? 1 : 0).toString(16).toUpperCase().padStart(2, '0') + " 0x" + (of_.value !== 0 ? 1 : 0).toString(16).toUpperCase().padStart(2, '0') + " 0x" + (sf.value !== 0 ? 1 : 0).toString(16).toUpperCase().padStart(2, '0') + " 0x" + (zf.value !== 0 ? 1 : 0).toString(16).toUpperCase().padStart(2, '0') + " 0x" + (pf.value !== 0 ? 1 : 0).toString(16).toUpperCase().padStart(2, '0') + " 0x" + (af.value !== 0 ? 1 : 0).toString(16).toUpperCase().padStart(2, '0'));
 }
 
 function showSystem() {
