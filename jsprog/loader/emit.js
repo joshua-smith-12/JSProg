@@ -327,7 +327,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(0x23); // global.get
             buffer.push(registers.indexOf("esp"));
             buffer.push(0x41); // i32.const
-            buffer.push(instruction.operandSet[0].size / 8);
+            putConstOnBuffer(buffer, instruction.operandSet[0].size / 8);
             buffer.push(0x6A); // i32.add
             buffer.push(0x24); // global.set
             buffer.push(registers.indexOf("esp"));
@@ -353,7 +353,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(0x23); // global.get
             buffer.push(registers.indexOf("esp"));
             buffer.push(0x41); // i32.const
-            buffer.push(instruction.operandSet[0].size / 8);
+            putConstOnBuffer(buffer, instruction.operandSet[0].size / 8);
             buffer.push(0x6B); // i32.sub
             buffer.push(0x24); // global.set
             buffer.push(registers.indexOf("esp"));
