@@ -2,8 +2,8 @@ const fs = require('fs');
 const readline = require('readline-sync');
 const { conditionalJumpOps } = require('./jsprog/loader/utils.js');
 
-const mem = new WebAssembly.Memory({initial: 1});
-  
+const mem = new WebAssembly.Memory({initial: 2});
+
 const eax = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const ebx = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const ecx = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
