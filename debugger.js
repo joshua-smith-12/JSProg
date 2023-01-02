@@ -87,7 +87,9 @@ function showMemory(source) {
     
     let row = "0x" + rowTop.toString(16).toUpperCase().padStart(8, '0') + ":  ";
     for (let j = rowTop; j > rowBottom; j--) {
-      if (j < 0 || j >= mem.buffer.byteLength) break;
+      console.log(rowTop);
+      console.log(rowBottom);
+      console.log(j);
       const db = mem.buffer[j]; 
       row = row + db.toString(16).toUpperCase().padStart(2, '0') + " ";
     }
@@ -237,9 +239,6 @@ async function doDebug() {
   while (mem.buffer.byteLength < (virtualBase + mmap.length)) mem.grow(1);
   
   for (let i = 0; i < mmap.length; i++) mem.buffer[virtualBase + i] = mmap[i];
-  
-  console.log(mmap.length);
-  console.log(mem.buffer[0x2C004]);
     
   runChunk(module, version, 0);
 }
