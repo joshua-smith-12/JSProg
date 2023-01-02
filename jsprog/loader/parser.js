@@ -247,6 +247,17 @@ async function tryParsePE(fileBuffer, virtualBase = 64 * 1024) {
 	return { header, tables, imports, codeChunkSet, virtualBase };
 }
 
+async function createMemoryMap(buffer, tables, virtualBase) {
+	for (const section of tables.sectionTables) {
+		const dataPointer = section.dataPointer
+		const addrStart = section.addrStart - virtualBase;
+		const size = section.addrEnd - section.addrStart;
+		console.log("Memory mapping data from image offset " + dataPointer + " to range (" + addrStart + ", " + (addrStart + size) + ")");
+		
+	}
+}
+
 module.exports = {
-	tryParsePE
+	tryParsePE,
+	createMemoryMap
 };

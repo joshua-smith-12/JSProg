@@ -9,7 +9,8 @@ async function processor(file) {
 	const fileData = await fs.readFile(file, 'binary');
 	const fileBuffer = Buffer.from(fileData, 'binary');
 	
-	const { codeChunkSet, header, virtualBase } = await parser.tryParsePE(fileBuffer);
+	const { codeChunkSet, header, tables, virtualBase } = await parser.tryParsePE(fileBuffer);
+	const mmap = await parser.createMemoryMap(fileBuffer, tables);
 	const { optionalHeader } = header;
 	const { imageMajorVersion, imageMinorVersion } = optionalHeader;
 	await fs.mkdir(`./chunks/${file}@${imageMajorVersion}.${imageMinorVersion}/`, { recursive: true });
