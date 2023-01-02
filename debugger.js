@@ -87,6 +87,7 @@ function showMemory(source) {
     
     let row = "0x" + rowTop.toString(16).toUpperCase().padStart(8, '0') + ":  ";
     for (let j = rowTop; j > rowBottom; j--) {
+      if (j < 0 || j >= mem.buffer.byteLength) break;
       const db = mem.buffer[j]; 
       row = row + db.toString(16).toUpperCase().padStart(2, '0') + " ";
     }
