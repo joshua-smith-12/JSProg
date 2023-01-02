@@ -1,6 +1,8 @@
 module.exports = {
     ApplyRelocations: async function(sectionTables, buf, header, virtualBase = 64 * 1024) {
         console.log("Applying relocations with an image virtual base address of 0x" + virtualBase.toString(16).toUpperCase().padStart(8, '0'));
+        
+        const relocDiff = virtualBase - header.optionalHeader.imagePreferredBase;
     
         // load the reloc section if it exists
         const relocIndex = sectionTables.findIndex(x => x.name === ".reloc");
@@ -26,8 +28,18 @@ module.exports = {
                 const relocType = (hintValue & 0xF000) >>> 12;
                 const relocOffset = hintValue & 0x0FFF;
                 
-                console.log("Applying relocation with type " + relocType + ", offset " + relocOffset);
+                const virtualAddress = blockPage + relocOffset + header.optionalHeader.imagePreferredBase;
+                const sectionIndex = sectionTables.findIndex(x => x.addrStart <= virtualAddress && x.addrEnd >= virtualAddress);
+                if (sectionIndex === -1) {
+                    console.log("No section found for relocation at virtual address 0x" + virtualAddress.toString(16).toUpperCase().padStart(8, '0'));
+                    continue;
+                } 
+                
+                const section = sectionTables[sectionIndex];
+                
+                console.log("Applying relocation with type " + relocType + ", virtual address 0x" + virtualAddress.toString(16).toUpperCase().padStart(8, '0'));
             
+                
             }
             
             blockAddr = blockAddr + blockSize;

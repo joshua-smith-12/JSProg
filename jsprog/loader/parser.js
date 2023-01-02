@@ -237,7 +237,7 @@ async function tryParsePE(fileBuffer) {
 	// TODO: confirm existence of the indicated DLLs with the required imports, or prompt to provide them if needed
 	
 	// apply address relocations	
-	await reloc.ApplyRelocations(sectionTables, fileBuffer);
+	await reloc.ApplyRelocations(sectionTables, fileBuffer, header);
 	
 	// launch code analysis
 	const codeChunkSet = await analysis.ProcessAllChunks(fileBuffer, sectionTables, header, importList);
