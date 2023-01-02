@@ -2,7 +2,7 @@ const fs = require('fs');
 const readline = require('readline-sync');
 const { conditionalJumpOps } = require('./jsprog/loader/utils.js');
 
-const mem = new WebAssembly.Memory({initial: 2});
+const mem = new WebAssembly.Memory({initial: 1});
 
 const eax = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const ebx = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
@@ -189,6 +189,11 @@ function runChunk(module, version, chunkId) {
 async function doDebug() {
   const module = readline.question("What module should I run? ");
   const version = readline.question("What is the version of the module? ");
+  
+  const info = JSON.parse(fs.readFileSync(`./chunks/${module}@${version}/program.json`));
+  const mmap = fs.readFileSync(`./chunks/${module}@${version}/${info.mmap}`));
+  
+  mem.buffer = Buffer.concat(mem.buffer, mmap);
     
   runChunk(module, version, 0);
 }
