@@ -194,7 +194,9 @@ async function doDebug() {
   const mmap = fs.readFileSync(`./chunks/${module}@${version}/${info.mmap}`);
   const virtualBase = info.virtualBase;
   
-  while (mem.buffer.length < (virtualBase + mmap.length) mem.grow(1);
+  while (mem.buffer.length < (virtualBase + mmap.length)) mem.grow(1);
+  
+  for (let i = 0; i < mmap.length; i++) mem.buffer[virtualBase + i] = mmap[i];
     
   runChunk(module, version, 0);
 }
