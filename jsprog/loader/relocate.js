@@ -19,6 +19,17 @@ module.exports = {
             
             console.log("Processing relocation on page at 0x" + blockPage.toString(16).toUpperCase().padStart(8, '0') + " of block length " + blockSize);
             
+            // read each relocation hint
+            for (let i = 8; i < blockSize; i = i + 2) {
+                const hintPointer = blockAddr + i;
+                const hintValue = buf.readUInt16LE(hintPointer);
+                const relocType = hintValue & 0xF000;
+                const relocOffset = hintValue & 0x0FFF;
+                
+                console.log("Applying relocation with type " + relocType + ", offset " + relocOffset);
+            
+            }
+            
             blockAddr = blockAddr + blockSize;
         }
     }
