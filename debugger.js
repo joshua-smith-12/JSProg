@@ -71,6 +71,12 @@ function debugHandler(chunkDetail, showAddr = true) {
   while (true) {
     if (command === "" || command === "continue") {
       break;
+    } else if (command === "help") {
+      console.log("Available commands:");
+      console.log("- continue: continue execution from current instruction");
+      console.log("- default <command>: set a default command to run at each breakpoint");
+      console.log("- show [reg|flags|sys|stack|all]: view specified values");
+      console.log("- inspect [<register>|<address>]: show memory at address");
     } else if (command.startsWith("default")) {
       defaultCommand = command.replace("default ", "");
     } else if (command === "show reg") {
@@ -104,8 +110,8 @@ function decodeInstruction(instruction) {
     case "JMP": {
       const destinationChunk = instruction.operandSet[1].val;
       const destinationInstr = instruction.operandSet[2].val;
-      if (destinationChunk === -1) return instruction.mnemonic + "this@" + destinationInstr;
-      else return instruction.mnemonic + "chunk" + destinationChunk + "@" + destinationInstr;
+      if (destinationChunk === -1) return instruction.mnemonic + " this@" + destinationInstr;
+      else return instruction.mnemonic + " chunk" + destinationChunk + "@" + destinationInstr;
     }
     default: {
       let res = instruction.mnemonic + " "; 
