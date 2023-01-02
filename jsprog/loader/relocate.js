@@ -23,7 +23,7 @@ module.exports = {
             for (let i = 8; i < blockSize; i = i + 2) {
                 const hintPointer = blockAddr + i;
                 const hintValue = buf.readUInt16LE(hintPointer);
-                const relocType = hintValue & 0xF000;
+                const relocType = (hintValue & 0xF000) >>> 12;
                 const relocOffset = hintValue & 0x0FFF;
                 
                 console.log("Applying relocation with type " + relocType + ", offset " + relocOffset);
