@@ -236,13 +236,14 @@ async function tryParsePE(fileBuffer) {
 	
 	// TODO: confirm existence of the indicated DLLs with the required imports, or prompt to provide them if needed
 	
+	// apply address relocations	
+	await reloc.ApplyRelocations(sectionTables, fileBuffer);
+	
 	// launch code analysis
 	const codeChunkSet = await analysis.ProcessAllChunks(fileBuffer, sectionTables, header, importList);
 	if (!codeChunkSet) return false;
 	
 	await analysis.FixupChunkReferences(codeChunkSet, sectionTables, importList, fileBuffer);
-	
-	await reloc.ApplyRelocations(codeChunkSet, sectionTables, fileBuffer);
 	
 	return { header, tables, imports, codeChunkSet };
 }
