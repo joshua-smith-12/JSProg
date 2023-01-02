@@ -117,7 +117,7 @@ function decodeInstruction(instruction) {
       let res = instruction.mnemonic + " "; 
       for(const op of instruction.operandSet) {
         if (op.indirect) res += "[";
-        if (op.type === "imm") res += op.val.toString(16).toUpperCase();
+        if (op.type === "imm") res += "0x" + (op.val | 0).toString(16).toUpperCase();
         else if (op.type === "reg") res += ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"][op.val];
         else console.log(op);
         if (op.indirect) res += "]";
