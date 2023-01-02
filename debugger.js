@@ -72,9 +72,7 @@ function inspectMemory(source) {
       inspectBase = ebp.value;
       break;
     default:
-      inspectBase = parseInt(source);
-      console.log(source);
-      console.log(inspectBase)
+      inspectBase = parseInt(source, 16);
       break;
   }
   
@@ -117,7 +115,7 @@ function debugHandler(chunkDetail, showAddr = true) {
     } else if (command.startsWith("default")) {
       defaultCommand = command.replace("default ", "");
     } else if (command.startsWith("inspect")) {
-      inspectMemory(command.replace("inspect "), "");
+      inspectMemory(command.replace("inspect ", ""));
     } else if (command === "show reg") {
       showRegisters();
     } else if (command === "show flags") {
