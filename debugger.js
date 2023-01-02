@@ -191,7 +191,7 @@ async function doDebug() {
   const version = readline.question("What is the version of the module? ");
   
   const info = JSON.parse(fs.readFileSync(`./chunks/${module}@${version}/program.json`));
-  const mmap = fs.readFileSync(`./chunks/${module}@${version}/${info.mmap}`));
+  const mmap = fs.readFileSync(`./chunks/${module}@${version}/${info.mmap}`);
   
   mem.buffer = Buffer.concat(mem.buffer, mmap);
     
