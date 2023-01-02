@@ -183,8 +183,8 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
     switch (instruction.mnemonic) {
         case "EXTERN": {
             // we can skip setting link register as externs won't use it
-            // push 0x00 to the stack (return address, unused but still need to specify)
-            await assembleInstruction({mnemonic: "PUSH", operandSet: [{type:'imm', val:0, size:32}]}, buffer, imports, targets, -1);
+            // push return address to the stack (unused but still need to specify)
+            await assembleInstruction({mnemonic: "PUSH", operandSet: [{type:'imm', val:instruction.next, size:32}]}, buffer, imports, targets, -1);
              
             buffer.push(0x10); // call
         
@@ -192,40 +192,33 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             const index = imports.findIndex(x => x === instruction.operandSet[0].val);
             if (index === -1) return false;
         
-            buffer.push(index); // index
+            putConstOnBuffer(buffer, index); // index
             break;
         }
         // CALL matches JMP in our implementation but requires a return address pushed
         case "CALL": {
-            await assembleInstruction({mnemonic: "PUSH", operandSet: [{type:'imm', val:0, size:32}]}, buffer, imports, targets, -1);
-            if(instruction.operandSet[2].type === "imm" && !instruction.operandSet[2].indirect) {
-                // set link register
-                setLinkRegister(buffer, instruction.operandSet[2].val);
-            
-                // call function
-                buffer.push(0x10); // call
-                const index = imports.findIndex(x => x === `chunk${instruction.operandSet[1].val}::defaultExport`);
-                if (index === -1) return false;
-                buffer.push(index);
-            } else {
-                console.log("Non-immediate call targets are not yet supported.");
-                return false;
-            }
-            break;
+            await assembleInstruction({mnemonic: "PUSH", operandSet: [{type:'imm', val:instruction.next, size:32}]}, buffer, imports, targets, -1);
         } 
         case "JMP": {
             if(instruction.operandSet[2].type === "imm" && !instruction.operandSet[2].indirect) {
                 // set link register
                 setLinkRegister(buffer, instruction.operandSet[2].val);
-            
-                // call function
-                buffer.push(0x10); // call
-                const index = imports.findIndex(x => x === `chunk${instruction.operandSet[1].val}::defaultExport`);
-                if (index === -1) {
-                    console.log("Failed to identify import for chunk in instruction.");
-                    return false;
+                
+                if (instruction.operandSet[1].val === -1) {
+                    // identify call depth and branch to the outer loop
+                    const numBlocks = targets.filter(x => x > instrIndex).length;
+                    buffer.push(0x0C); // br
+                    putConstOnBuffer(buffer, numBlocks);
+                } else { 
+                    // call function
+                    buffer.push(0x10); // call 
+                    const index = imports.findIndex(x => x === `chunk${instruction.operandSet[1].val}::defaultExport`);
+                    if (index === -1) {
+                        console.log("Failed to identify import for chunk in instruction.");
+                        return false;
+                    } 
+                    putConstOnBuffer(buffer, index);
                 } 
-                buffer.push(index);
             } else {
                 console.log("Non-immediate jump targets are not yet supported.");
                 return false;
