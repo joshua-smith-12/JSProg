@@ -72,21 +72,21 @@ function inspectMemory(source) {
       inspectBase = ebp.value;
       break;
     default:
-      inspectBase = parseInt(source);
+      inspectBase = parseInt(source, 16);
       break;
   }
   
-  showMemory(inspectBase, source);
+  showMemory(inspectBase);
 }
 
-function showMemory(source, input) {
+function showMemory(source) {
   let rowTop = source;
   for (let i = 0; i < 4; i++) {
     const rowBottom = Math.max(0, rowTop - 16);
     if (rowBottom === rowTop) break;
     
     const stackRow = new Uint32Array(mem.buffer, rowBottom, Math.min(4, (rowTop - rowBottom) / 4));
-    let row = input + "-0x" + (i * 16).toString(16).toUpperCase().padStart(2, '0') + "  ";
+    let row = (stackRow - i * 16).toString(16).toUpperCase().padStart(2, '0') + ":  ";
     for (let j = stackRow.length - 1; j >= 0; j--) {
       const dw = stackRow[j]; 
       row = row + "0x" + dw.toString(16).toUpperCase().padStart(8, '0') + " ";
