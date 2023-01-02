@@ -192,8 +192,9 @@ async function doDebug() {
   
   const info = JSON.parse(fs.readFileSync(`./chunks/${module}@${version}/program.json`));
   const mmap = fs.readFileSync(`./chunks/${module}@${version}/${info.mmap}`);
+  const virtualBase = info.virtualBase;
   
-  mem.buffer = Buffer.concat([mem.buffer, mmap]);
+  while (mem.buffer.length < (virtualBase + mmap.length) mem.grow(1);
     
   runChunk(module, version, 0);
 }
