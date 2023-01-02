@@ -7,7 +7,9 @@ function relocate(buf, section, address, type, diff) {
             // IMAGE_REL_BASED_HIGHLOW
             const bufferPos = section.dataPointer + (address - section.addrStart);
             const current = buf.readUInt32LE(bufferPos);
+            console.log("Before: " + current);
             buf.writeUInt32LE(current + diff, bufferPos);
+            console.log("After: " + buf.readUInt32LE(bufferPos));
             break;
     }
 }

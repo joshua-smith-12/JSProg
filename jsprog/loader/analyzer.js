@@ -2613,7 +2613,6 @@ const ProcessChunk = async (buf, virtualAddress, dataPointer, chunkRanges, impor
 				if (operandSet[0].indirect) {
 					const target = operandSet[0].val;
 					// determine the data pointer for the target
-					console.log(instr);
 					const targetSection = sectionTables.find(x => x.addrStart <= target && x.addrEnd >= target);
 					const targetDataPointer = targetSection.dataPointer + (target - targetSection.addrStart);
 					const targetVirtualAddress = buf.readInt32LE(targetDataPointer);
