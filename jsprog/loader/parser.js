@@ -1,4 +1,5 @@
 const analysis = require('./analyzer.js');
+const reloc = require('./relocate.js');
 const {
 	DataDirectory,
 	SectionHeader,
@@ -247,6 +248,8 @@ async function tryParsePE(fileBuffer) {
 	if (!codeChunkSet) return false;
 	
 	await analysis.FixupChunkReferences(codeChunkSet, sectionTables, importList, fileBuffer);
+	
+	await reloc.ApplyRelocations(codeChunkSet, sectionTables, fileBuffer);
 	
 	return { header, tables, imports, codeChunkSet };
 }
