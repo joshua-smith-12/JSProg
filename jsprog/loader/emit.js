@@ -594,6 +594,15 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             setOverflowFlag(buffer, instruction.operandSet[0]);
             break;
         }
+        case "NOT": {
+            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            buffer.push(0x41); // i32.const
+            putConstOnBuffer(buffer, 0xFFFFFFFF);
+            buffer.push(0x73); // i32.xor
+            
+            if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            break;
+        } 
         case "ICALL": {
             await assembleInstruction({mnemonic: "PUSH", operandSet: [{type:'imm', val:instruction.next, size:32}]}, buffer, imports, targets, -1);
         }
