@@ -241,7 +241,7 @@ async function doDebug() {
   const memArray = new Uint8Array(mem.buffer);
   
   memArray.fill(0, 0, virtualBase);
-  memArray.set(virtualBase, mmap);
+  memArray.set(mmap, virtualBase);
     
   runChunk(module, version, 0);
 }
