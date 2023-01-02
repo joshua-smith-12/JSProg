@@ -14,7 +14,7 @@ module.exports = {
             const blockPage = buf.readUInt32LE(blockAddr);
             const blockSize = buf.readUInt32LE(blockAddr + 4);
             
-            console.log("Processing relocation on page at " + blockPage.toString(16).toUpperCase().padStart(8, '0'));
+            console.log("Processing relocation on page at 0x" + blockPage.toString(16).toUpperCase().padStart(8, '0') + " of block length " + blockSize);
             
             blockAddr = blockAddr + blockSize;
         }
