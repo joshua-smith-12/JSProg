@@ -683,7 +683,7 @@ async function assemble(chunk, debuggerEnabled) {
     importList.push("system::readSegment");
     importList.push("system::writeSegment");
     importList.push("system::debugger");
-    importList.push("system::icall");
+    importList.push("system::vcall");
     for (const instruction of chunk.instructions) { 
         if ((instruction.mnemonic === "JMP" || instruction.mnemonic === "CALL" || conditionalJumpOps.includes(instruction.mnemonic)) && instruction.operandSet[0].type !== 'reg' && instruction.operandSet[1].val !== -1 && !importList.includes(`chunk${instruction.operandSet[1].val}::defaultExport`)) {
             importList.push(`chunk${instruction.operandSet[1].val}::defaultExport`);
