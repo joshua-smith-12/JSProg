@@ -44,8 +44,43 @@ function showSystem() {
   console.log("0x" + link.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + t1.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + t2.value.toString(16).toUpperCase().padStart(8, '0'));
 }
 
-function showStack() {
-  let rowTop = esp.value;
+function inspectMemory(source) {
+  let inspectBase = 0;
+  switch(source.toString()) {
+    case "eax":
+      inspectBase = eax.value;
+      break;
+    case "ebx":
+      inspectBase = ebx.value;
+      break;
+    case "ecx":
+      inspectBase = ecx.value;
+      break;
+    case "edx":
+      inspectBase = edx.value;
+      break;
+    case "esi":
+      inspectBase = esi.value;
+      break;
+    case "edi":
+      inspectBase = edi.value;
+      break;
+    case "esp":
+      inspectBase = esp.value;
+      break;
+    case "ebp":
+      inspectBase = ebp.value;
+      break;
+    default:
+      inspectBase = parseInt(source);
+      break;
+  }
+  
+  showMemory(inspectBase);
+}
+
+function showMemory(source) {
+  let rowTop = source;
   for (let i = 0; i < 4; i++) {
     const rowBottom = Math.max(0, rowTop - 16);
     if (rowBottom === rowTop) break;
@@ -79,6 +114,9 @@ function debugHandler(chunkDetail, showAddr = true) {
       console.log("- inspect [<register>|<address>]: show memory at address");
     } else if (command.startsWith("default")) {
       defaultCommand = command.replace("default ", "");
+    } else if (command.startsWith("inspect")) {
+      inspectMemory(command.replace("inspect "), "");
+    } 
     } else if (command === "show reg") {
       showRegisters();
     } else if (command === "show flags") {
@@ -86,7 +124,7 @@ function debugHandler(chunkDetail, showAddr = true) {
     } else if (command === "show sys") {
       showSystem();
     } else if (command === "show stack") {
-      showStack();
+      inspectMemory("esp");
     } else if (command === "show all") {
       showRegisters();
       console.log("");
@@ -94,7 +132,7 @@ function debugHandler(chunkDetail, showAddr = true) {
       console.log("");
       showSystem();
       console.log("");
-      showStack();
+      inspectMemory("esp");
     } else {
       console.log("Unrecognized command " + command);
     }
