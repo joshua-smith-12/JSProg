@@ -13,7 +13,7 @@ function relocate(buf, section, address, type, diff) {
 }
 
 module.exports = {
-    ApplyRelocations: async function(sectionTables, buf, header, virtualBase = 64 * 1024) {
+    ApplyRelocations: async function(sectionTables, buf, header, virtualBase) {
         console.log("Applying relocations with an image virtual base address of 0x" + virtualBase.toString(16).toUpperCase().padStart(8, '0'));
         
         const relocDiff = virtualBase - header.optionalHeader.imagePreferredBase;

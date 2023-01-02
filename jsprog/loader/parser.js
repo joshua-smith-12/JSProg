@@ -106,9 +106,7 @@ async function tryParseHeader(fileBuffer) {
 	};
 }
 
-async function tryParseTables (fileBuffer, header) {
-	const preferredBase = header.optionalHeader.imagePreferredBase;
-
+async function tryParseTables (fileBuffer, header, preferredBase) {
 	const dataTableBase = header.optionalHeaderBase + 0x60;
 	
 	const dataTables = [];
@@ -222,22 +220,22 @@ async function findImports(fileBuffer, dataTables, sectionTables, preferredBase)
 	return { importTable, importList, importSection };
 }
 
-async function tryParsePE(fileBuffer) {
+async function tryParsePE(fileBuffer, virtualBase = 64 * 1024) {
 	const header = await tryParseHeader(fileBuffer);
 	if (!header) return false;
 	
-	const tables = await tryParseTables(fileBuffer, header);
+	const tables = await tryParseTables(fileBuffer, header, virtualBase);
 	if (!tables) return false;
 	const { dataTables, sectionTables } = tables;
 	
-	const imports = await findImports(fileBuffer, dataTables, sectionTables, header.optionalHeader.imagePreferredBase);
+	const imports = await findImports(fileBuffer, dataTables, sectionTables, virtualBase);
 	if (!imports) return false;
 	const { importTable, importList, importSection } = imports;
 	
 	// TODO: confirm existence of the indicated DLLs with the required imports, or prompt to provide them if needed
 	
 	// apply address relocations	
-	await reloc.ApplyRelocations(sectionTables, fileBuffer, header);
+	await reloc.ApplyRelocations(sectionTables, fileBuffer, header, virtualBase);
 	
 	// launch code analysis
 	const codeChunkSet = await analysis.ProcessAllChunks(fileBuffer, sectionTables, header, importList);
