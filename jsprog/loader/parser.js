@@ -244,7 +244,7 @@ async function tryParsePE(fileBuffer, virtualBase = 64 * 1024) {
 	
 	await analysis.FixupChunkReferences(codeChunkSet, sectionTables, importList, fileBuffer);
 	
-	return { header, tables, imports, codeChunkSet };
+	return { header, tables, imports, codeChunkSet, virtualBase };
 }
 
 module.exports = {
