@@ -59,7 +59,7 @@ function operandToStack(operand, prefixes, buffer) {
         if (operand.indirect) {
             buffer.push(0x41); // i32.const
             putConstOnBuffer(buffer, operand.val);
-            
+            if (!sizedLoad(buffer, operand.size)) return false;
         } else {
             buffer.push(0x41); // i32.const
             putConstOnBuffer(buffer, operand.val);
@@ -707,12 +707,14 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
 // consts are encoded with LEB encoding
 function putConstOnBuffer(chunkBuffer, constValue) {
     const byteBuffer = [];
-    
-    let uint = constValue >>> 0;
+    let uint = constValue | 0;
     while (true) {
         const currByte = uint & 0x7F;
         uint = uint >>> 7;
-        if (uint === 0) {
+        if (uint === 0 && (currByte & 0x40) === 0) {
+            byteBuffer.push(currByte);
+            break;
+        } else if (uint === -1 && (currByte & 0x40) !== 0) { 
             byteBuffer.push(currByte);
             break;
         } else {
