@@ -247,14 +247,31 @@ async function tryParsePE(fileBuffer, virtualBase = 64 * 1024) {
 	return { header, tables, imports, codeChunkSet, virtualBase };
 }
 
-async function createMemoryMap(buffer, tables, virtualBase) {
+async function createMemoryMap(fileBuffer, tables, virtualBase) {
+	// iterate sections once to find memory map size
+	let mapSize = 0;
 	for (const section of tables.sectionTables) {
-		const dataPointer = section.dataPointer
+		const dataPointer = section.dataPointer;
+		const addrStart = section.addrStart - virtualBase;
+		const size = section.addrEnd - section.addrStart;
+		mapSize = Math.max(mapSize, addrStart + size);
+	}
+	
+	console.log("Creating memory map with size " + mapSize);
+	const memoryMap = Buffer.alloc(mapSize);
+	
+	for (const section of tables.sectionTables) {
+		const dataPointer = section.dataPointer;
 		const addrStart = section.addrStart - virtualBase;
 		const size = section.addrEnd - section.addrStart;
 		console.log("Memory mapping data from image offset " + dataPointer + " to range (" + addrStart + ", " + (addrStart + size) + ")");
 		
+		for(let i = 0; i < size; i++) {
+			memoryMap[addrStart + i] = fileBuffer[dataPointer + i];
+		}
 	}
+	
+	return memoryMap;
 }
 
 module.exports = {
