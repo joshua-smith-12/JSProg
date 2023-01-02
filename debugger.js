@@ -73,6 +73,8 @@ function inspectMemory(source) {
       break;
     default:
       inspectBase = parseInt(source);
+      console.log(source);
+      console.log(inspectBase)
       break;
   }
   
