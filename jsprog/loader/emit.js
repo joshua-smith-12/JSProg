@@ -638,6 +638,50 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             break;
         } 
+        case "SAL":
+        case "SHL": {
+            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
+            // sub 1 from shift count to help set CF
+            buffer.push(0x41); // i32.const
+            putConstOnBuffer(buffer, 1);
+            buffer.push(0x6B); // i32.sub
+            
+            buffer.push(0x74); // i32.shl
+            
+            // compute CF - upper bit
+            buffer.push(0x41); // i32.const
+            putConstOnBuffer(buffer, 0x80000000);
+            buffer.push(0x71); // i32.and
+            
+            // set CF
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("cf"));
+            
+            // reload original and shl
+            if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
+            buffer.push(0x74); // i32.shl
+            
+            // store temporarily in t1
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("t1"));
+            
+            // set relevant flags based on result
+            // PF - parity
+            setParityFlag(buffer); 
+            
+            // ZF - zero
+            setZeroFlag(buffer);
+            
+            // SF - sign
+            setSignFlag(buffer);
+            
+            // restore from t1 and put into destination operand
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1"));
+            if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            break;
+        }
         case "ICALL": {
             await assembleInstruction({mnemonic: "PUSH", operandSet: [{type:'imm', val:instruction.next, size:32}]}, buffer, imports, targets, -1);
         }
