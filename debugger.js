@@ -238,8 +238,10 @@ async function doDebug() {
   
   while (mem.buffer.byteLength < (virtualBase + mmap.length)) mem.grow(1);
   
-  for (let i = 0; i < virtualBase; i++) mem.buffer[i] = 0;
-  for (let i = 0; i < mmap.length; i++) mem.buffer[virtualBase + i] = mmap[i];
+  const memArray = new Uint8Array(mem.buffer);
+  
+  memArray.set(0, [0] * virtualBase);
+  memArray.set(virtualBase, mmap);
     
   runChunk(module, version, 0);
 }
