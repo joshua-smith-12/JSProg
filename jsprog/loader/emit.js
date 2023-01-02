@@ -705,25 +705,29 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
 
 // puts a const onto the buffer by bytes
 // consts are encoded with LEB encoding
-function putConstOnBuffer(chunkBuffer, constValue) {
-    const byteBuffer = [];
-    let uint = constValue | 0;
-    while (true) {
-        const currByte = uint & 0x7F;
-        uint = uint >>> 7;
-        if (uint === 0 && (currByte & 0x40) === 0) {
-            byteBuffer.push(currByte);
-            break;
-        } else if (uint === -1 && (currByte & 0x40) !== 0) { 
-            byteBuffer.push(currByte);
-            break;
-        } else {
-            byteBuffer.push(currByte | 0x80);
-        }
+function encodeSignedLeb128FromInt32(value) {
+  value |= 0;
+  const result = [];
+  while (true) {
+    const byte_ = value & 0x7f;
+    value >>= 7;
+    if (
+      (value === 0 && (byte_ & 0x40) === 0) ||
+      (value === -1 && (byte_ & 0x40) !== 0)
+    ) {
+      result.push(byte_);
+      return result;
     }
-    
+    result.push(byte_ | 0x80);
+  }
+}
+
+function putConstOnBuffer(chunkBuffer, constValue) {
+    const byteBuffer = encodeSignedLeb128FromInt32(constValue);
     for (const b of byteBuffer) chunkBuffer.push(b);
 } 
+
+
 
 async function assemble(chunk, debuggerEnabled) {
     const chunkBuffer = [];
