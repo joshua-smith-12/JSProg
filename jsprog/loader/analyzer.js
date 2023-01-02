@@ -2845,6 +2845,9 @@ module.exports = {
 								return;
 							}
 						}
+					} else {
+						// indicate an indeterminate result (needs to be computed at runtime)
+						instruction.mnemonic = "I" + instruction.mnemonic;
 					}
 				}
 			}
