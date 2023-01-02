@@ -124,14 +124,16 @@ function debugHandler(chunkDetail, showAddr = true) {
     } else if (command === "show stack") {
       inspectMemory("esp");
     } else if (command === "show all") {
-      console.log("Registers");
+      console.log("\nRegisters");
       showRegisters();
       console.log("\nFlags");
       showFlags();
       console.log("\nSystem Variables");
       showSystem();
-      console.log("\nStack");
-      inspectMemory("esp");
+      if (esp.value > 0) {
+        console.log("\nStack");
+        inspectMemory("esp");
+      } 
     } else {
       console.log("Unrecognized command " + command);
     }
