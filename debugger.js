@@ -82,10 +82,10 @@ function inspectMemory(source) {
 function showMemory(source) {
   let rowTop = source;
   for (let i = 0; i < 8; i++) {
-    const rowBottom = Math.max(0, rowTop - 8);
+    const rowBottom = Math.max(0, rowTop - 16);
     if (rowBottom === rowTop) break;
     
-    const stackRow = new Uint8Array(mem.buffer, rowBottom, Math.min(8, rowTop - rowBottom));
+    const stackRow = new Uint8Array(mem.buffer, rowBottom, Math.min(16, rowTop - rowBottom));
     let row = "0x" + rowTop.toString(16).toUpperCase().padStart(8, '0') + ":  ";
     for (let j = stackRow.length - 1; j >= 0; j--) {
       const db = stackRow[j]; 
