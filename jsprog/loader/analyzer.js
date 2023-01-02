@@ -2620,7 +2620,6 @@ const ProcessChunk = async (buf, virtualAddress, dataPointer, chunkRanges, impor
 						outstandingChunks.push(targetVirtualAddress);
 						operandSet[0].indirect = false;
 						operandSet[0].val = targetVirtualAddress - nextInstructionAddress;
-						console.log(operandSet[0]);
 					}
 				} else {
 					outstandingChunks.push(callTarget);
@@ -2690,7 +2689,7 @@ module.exports = {
 			const chunkOffset = virtualAddress - chunkSection.addrStart;
 			const imageOffset = chunkOffset + chunkSection.dataPointer;
 			
-			console.log(`Processing chunk at section offset 0x${chunkOffset.toString(16).toUpperCase()}, image offset 0x${imageOffset.toString(16).toUpperCase()}, virtual address 0x${virtualAddress.toString(16).toUpperCase()}`);
+			//console.log(`Processing chunk at section offset 0x${chunkOffset.toString(16).toUpperCase()}, image offset 0x${imageOffset.toString(16).toUpperCase()}, virtual address 0x${virtualAddress.toString(16).toUpperCase()}`);
 		
 			// check if this chunk was already processed at some point
 			if (!chunkRanges.some(x => x.chunkRangeStart <= virtualAddress && x.chunkRangeEnd > virtualAddress)) {

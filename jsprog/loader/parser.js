@@ -141,9 +141,6 @@ async function tryParseTables (fileBuffer, header) {
 	
 	console.log(`Successfully read ${dataTables.length} data tables and ${sectionTables.length} sections from image`);
 	
-	console.log(JSON.stringify(dataTables));
-	console.log(JSON.stringify(sectionTables));
-	
 	return { dataTables, sectionTables };
 }
 
@@ -185,8 +182,6 @@ async function findImports(fileBuffer, dataTables, sectionTables, preferredBase)
 		importIndex = importIndex + 1;
 	}
 	
-	console.log(JSON.stringify(importTable));
-	
 	// process the import hints in each imported DLL
 	// we don't care about thunks in this case since the calls will get patched over anyway during processing
 	const importList = [];
@@ -223,8 +218,6 @@ async function findImports(fileBuffer, dataTables, sectionTables, preferredBase)
 		const currImportTable = DllImportDefinition(importDll.name, currImportList)
 		importList.push(currImportTable);
 	}
-	
-	console.log(JSON.stringify(importList));
 	
 	return { importTable, importList, importSection };
 }
