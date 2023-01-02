@@ -63,7 +63,7 @@ function showStack() {
 }
 
 function debugHandler(chunkDetail, showAddr = true) {
-  const instruction = chunkDetail.instructions[t1.value];
+  const instruction = chunkDetail.instructions[t2.value];
   const decoded = decodeInstruction(instruction);
   if (showAddr) console.log("0x" + instruction.virtualAddress.toString(16).toUpperCase() + ": " + decoded);
   

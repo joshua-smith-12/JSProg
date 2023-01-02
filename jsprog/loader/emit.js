@@ -611,6 +611,19 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(registers.indexOf("of"));
             break;
         }
+        case "ICALL": {
+            await assembleInstruction({mnemonic: "PUSH", operandSet: [{type:'imm', val:instruction.next, size:32}]}, buffer, imports, targets, -1);
+        }
+        case "IJMP": {
+            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("t1"));
+            
+            // call import 3 for virtual call
+            buffer.push(0x10);
+            buffer.push(0x03);
+            break;
+        }
         default: {
             console.log("Failed to assemble WASM chunk, instruction has unknown mnemonic!");
             return false; 
@@ -670,6 +683,7 @@ async function assemble(chunk, debuggerEnabled) {
     importList.push("system::readSegment");
     importList.push("system::writeSegment");
     importList.push("system::debugger");
+    importList.push("system::icall");
     for (const instruction of chunk.instructions) { 
         if ((instruction.mnemonic === "JMP" || instruction.mnemonic === "CALL" || conditionalJumpOps.includes(instruction.mnemonic)) && instruction.operandSet[0].type !== 'reg' && instruction.operandSet[1].val !== -1 && !importList.includes(`chunk${instruction.operandSet[1].val}::defaultExport`)) {
             importList.push(`chunk${instruction.operandSet[1].val}::defaultExport`);
@@ -788,7 +802,7 @@ async function assemble(chunk, debuggerEnabled) {
             tempFuncBuffer.push(0x41); // i32.const
             putConstOnBuffer(tempFuncBuffer, i);
             tempFuncBuffer.push(0x24); // global.set
-            tempFuncBuffer.push(registers.indexOf("t1"));
+            tempFuncBuffer.push(registers.indexOf("t2"));
             tempFuncBuffer.push(0x10); // call
             tempFuncBuffer.push(0x02); // debugger index
         }
