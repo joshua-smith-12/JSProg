@@ -85,6 +85,11 @@ function operandToStack(operand, prefixes, buffer) {
             buffer.push(operand.val);
         }
     } else if (operand.type === 'moffs') {
+        // check prefix count
+        if (prefixes.length === 0) {
+            operand.type = 'imm';
+            return operandToStack(operand, prefixes, buffer);
+        }
         // get the prefix and offset into t1 and t2
         buffer.push(0x41); // i32.const
         putConstOnBuffer(buffer, prefixes[0]);
@@ -150,6 +155,11 @@ function stackToOperand(operand, prefixes, buffer) {
             buffer.push(operand.val);
         }
     } else if (operand.type === 'moffs') {
+        // check prefix count
+        if (prefixes.length === 0) {
+            operand.type = 'imm';
+            return stackToOperand(operand, prefixes, buffer);
+        }
         // get the prefix and offset into t1 and t2
         buffer.push(0x41); // i32.const
         putConstOnBuffer(buffer, prefixes[0]);
