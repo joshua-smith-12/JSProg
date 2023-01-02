@@ -499,6 +499,29 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(0x0B); // close block
             break;
         }
+        case "JE":
+        case "JZ": {
+            // create a block
+            buffer.push(0x02); 
+            buffer.push(0x40);
+            // get ZF
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("zf"));
+            // test if zero, then invert result and break if so
+            buffer.push(0x45); // i32.eqz
+            buffer.push(0x41); // i32.const
+            buffer.push(0x01);
+            buffer.push(0x73); // i32.xor
+            buffer.push(0x0D); // br_if
+            buffer.push(0x00);
+            
+            // value is zero, perform regular JUMP
+            instruction.mnemonic = "JMP";
+            await assembleInstruction(instruction, buffer, imports, targets, instrIndex);
+            
+            buffer.push(0x0B); // close block
+            break;
+        }
         case "CMP": {
             if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
