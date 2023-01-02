@@ -100,11 +100,12 @@ function debugHandler(chunkDetail, showAddr = true) {
 
 function decodeInstruction(instruction) {
   switch (instruction.mnemonic) {
+    case "CALL":
     case "JMP": {
       const destinationChunk = instruction.operandSet[1].val;
       const destinationInstr = instruction.operandSet[2].val;
-      if (destinationChunk === -1) return "JMP this@" + destinationInstr;
-      else return "JMP chunk" + destinationChunk + "@" + destinationInstr;
+      if (destinationChunk === -1) return instruction.mnemonic + "this@" + destinationInstr;
+      else return instruction.mnemonic + "chunk" + destinationChunk + "@" + destinationInstr;
     }
     default: {
       let res = instruction.mnemonic + " "; 
