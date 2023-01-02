@@ -223,6 +223,7 @@ async function findImports(fileBuffer, dataTables, sectionTables, preferredBase)
 async function tryParsePE(fileBuffer, virtualBase = 64 * 1024) {
 	const header = await tryParseHeader(fileBuffer);
 	if (!header) return false;
+	header.formalEntryPoint = header.formalEntryPoint - header.optionalHeader.imagePreferredBase + virtualBase;
 	
 	const tables = await tryParseTables(fileBuffer, header, virtualBase);
 	if (!tables) return false;
