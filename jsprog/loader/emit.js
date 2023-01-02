@@ -189,6 +189,87 @@ function setLinkRegister(buffer, target) {
     buffer.push(registers.indexOf("link"));
 }
 
+function setParityFlag(buffer) {
+    // PF - parity
+    // set if the number of bits set in low byte of result is even
+    buffer.push(0x23); // global.get
+    buffer.push(registers.indexOf("t1"));
+    buffer.push(0x41); // i32.const
+    putConstOnBuffer(buffer, 0xFF);
+    buffer.push(0x71); // i32.and
+    buffer.push(0x69); // i32.popcnt
+    buffer.push(0x41); // i32.const
+    buffer.push(0x02);
+    buffer.push(0x70); // i32.rem_u
+    buffer.push(0x41); // i32.const
+    buffer.push(0x01);
+    buffer.push(0x73); // i32.xor
+            
+    // update pf flag
+    buffer.push(0x24); // global.set
+    buffer.push(registers.indexOf("pf"));
+}
+
+function setZeroFlag(buffer) {
+    // ZF - zero
+    // set if the result is zero
+    buffer.push(0x23); // global.get
+    buffer.push(registers.indexOf("t1"));
+    buffer.push(0x45); // i32.eqz
+    // update zf flag
+    buffer.push(0x24); // global.set
+    buffer.push(registers.indexOf("zf"));
+}
+
+function setSignFlag(buffer) {
+    // SF - sign
+    // set if the result is signed negative
+    buffer.push(0x23); // global.get
+    buffer.push(registers.indexOf("t1"));
+    buffer.push(0x41); // i32.const
+    buffer.push(0x00);
+    buffer.push(0x48); // i32.lt_s
+    // update sf flag
+    buffer.push(0x24); // global.set
+    buffer.push(registers.indexOf("sf"));
+}
+
+function setCarryFlag(buffer, first, second) {
+    // CF - carry
+    // set if op 2 is smaller than op 1
+    if (!operandToStack(second, [], buffer)) return false;
+    if (!operandToStack(first, [], buffer)) return false;
+    buffer.push(0x49); // i32.lt_u
+    // update cf flag
+    buffer.push(0x24); // global.set
+    buffer.push(registers.indexOf("cf"));
+}
+
+function setOverflowFlag(buffer, first) {
+    // OF - overflow
+    // set if sign bit of result does not match sign bit of op1
+    
+    // get sign bit of op1
+    if (!operandToStack(first, [], buffer)) return false;
+    buffer.push(0x41); // i32.const
+    putConstOnBuffer(buffer, 0x80000000);
+    buffer.push(0x71); // i32.and
+    
+    // get sign bit of result
+    buffer.push(0x23); // global.get
+    buffer.push(registers.indexOf("t1"));
+    buffer.push(0x41); // i32.const
+    putConstOnBuffer(buffer, 0x80000000);
+    buffer.push(0x71); // i32.and
+    
+    // xor to confirm sign bits are different
+    buffer.push(0x73); // i32.xor
+    
+    // update of flag
+    buffer.push(0x24); // global.set
+    buffer.push(registers.indexOf("of"));
+}
+
 async function assembleInstruction(instruction, buffer, imports, targets, instrIndex) {
     switch (instruction.mnemonic) {
         case "EXTERN": {
@@ -292,10 +373,8 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(registers.indexOf("t1"));
             
             // calculate and set flags
-            // CF - carry
+            // CF - carry - needs to be set manually as it differs from CMP
             // set if a+b overflows unsigned
-            // do not need to reset flag as it is always set or unset by this code
-            
             // detect by checking if result is less than both a and b (unsigned)
             // compare to first operand
             buffer.push(0x23); // global.get
@@ -315,40 +394,16 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(registers.indexOf("cf"));
             
             // PF - parity
-            // set if the number of bits set in result is even
-            buffer.push(0x23); // global.get
-            buffer.push(registers.indexOf("t1"));
-            buffer.push(0x69); // i32.popcnt
-            buffer.push(0x41); // i32.const
-            buffer.push(0x02);
-            buffer.push(0x70); // i32.rem_u
-            buffer.push(0x41); // i32.const
-            buffer.push(0x01);
-            buffer.push(0x73); // i32.xor
-            
-            // update pf flag
-            buffer.push(0x24); // global.set
-            buffer.push(registers.indexOf("pf")); 
+            setParityFlag(buffer); 
             
             // ZF - zero
-            // set if the result is zero
-            buffer.push(0x23); // global.get
-            buffer.push(registers.indexOf("t1"));
-            buffer.push(0x45); // i32.eqz
-            // update zf flag
-            buffer.push(0x24); // global.set
-            buffer.push(registers.indexOf("zf"));
+            setZeroFlag(buffer);
             
             // SF - sign
-            // set if the result is signed negative
-            buffer.push(0x23); // global.get
-            buffer.push(registers.indexOf("t1"));
-            buffer.push(0x41); // i32.const
-            buffer.push(0x00);
-            buffer.push(0x48); // i32.lt_s
-            // update sf flag
-            buffer.push(0x24); // global.set
-            buffer.push(registers.indexOf("sf"));
+            setSignFlag(buffer);
+            
+            // OF - overflow
+            setOverflowFlag(buffer, instruction.operandSet[0]);
             
             // restore from t1 and put into destination operand
             buffer.push(0x23); // global.get
@@ -378,47 +433,55 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             
             // set relevant flags based on result
             // PF - parity
-            // set if the number of bits set in result is even
-            buffer.push(0x23); // global.get
-            buffer.push(registers.indexOf("t1"));
-            buffer.push(0x69); // i32.popcnt
-            buffer.push(0x41); // i32.const
-            buffer.push(0x02);
-            buffer.push(0x70); // i32.rem_u
-            buffer.push(0x41); // i32.const
-            buffer.push(0x01);
-            buffer.push(0x73); // i32.xor
-            
-            // update pf flag
-            buffer.push(0x24); // global.set
-            buffer.push(registers.indexOf("pf")); 
+            setParityFlag(buffer); 
             
             // ZF - zero
-            // set if the result is zero
-            buffer.push(0x23); // global.get
-            buffer.push(registers.indexOf("t1"));
-            buffer.push(0x45); // i32.eqz
-            // update zf flag
-            buffer.push(0x24); // global.set
-            buffer.push(registers.indexOf("zf"));
+            setZeroFlag(buffer);
             
             // SF - sign
-            // set if the result is signed negative
-            buffer.push(0x23); // global.get
-            buffer.push(registers.indexOf("t1"));
-            buffer.push(0x41); // i32.const
-            buffer.push(0x00);
-            buffer.push(0x48); // i32.lt_s
-            // update sf flag
-            buffer.push(0x24); // global.set
-            buffer.push(registers.indexOf("sf"));
+            setSignFlag(buffer);
             
             // restore from t1 and put into destination operand
             buffer.push(0x23); // global.get
             buffer.push(registers.indexOf("t1"));
             if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             break;
-        } 
+        }
+        case "AND": {
+            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
+            buffer.push(0x71); // i32.and
+            
+            // store temporarily in t1
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("t1"));
+            
+            // reset of and cf flags
+            buffer.push(0x41); // i32.const
+            buffer.push(0x00);
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("of"));
+            buffer.push(0x41); // i32.const
+            buffer.push(0x00);
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("cf"));
+            
+            // set relevant flags based on result
+            // PF - parity
+            setParityFlag(buffer); 
+            
+            // ZF - zero
+            setZeroFlag(buffer);
+            
+            // SF - sign
+            setSignFlag(buffer);
+            
+            // restore from t1 and put into destination operand
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1"));
+            if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            break;
+        }
         case "TEST": {
             if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
@@ -440,40 +503,13 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             
             // set relevant flags based on result
             // PF - parity
-            // set if the number of bits set in result is even
-            buffer.push(0x23); // global.get
-            buffer.push(registers.indexOf("t1"));
-            buffer.push(0x69); // i32.popcnt
-            buffer.push(0x41); // i32.const
-            buffer.push(0x02);
-            buffer.push(0x70); // i32.rem_u
-            buffer.push(0x41); // i32.const
-            buffer.push(0x01);
-            buffer.push(0x73); // i32.xor
-            
-            // update pf flag
-            buffer.push(0x24); // global.set
-            buffer.push(registers.indexOf("pf")); 
+            setParityFlag(buffer); 
             
             // ZF - zero
-            // set if the result is zero
-            buffer.push(0x23); // global.get
-            buffer.push(registers.indexOf("t1"));
-            buffer.push(0x45); // i32.eqz
-            // update zf flag
-            buffer.push(0x24); // global.set
-            buffer.push(registers.indexOf("zf"));
+            setZeroFlag(buffer);
             
             // SF - sign
-            // set if the result is signed negative
-            buffer.push(0x23); // global.get
-            buffer.push(registers.indexOf("t1"));
-            buffer.push(0x41); // i32.const
-            buffer.push(0x00);
-            buffer.push(0x48); // i32.lt_s
-            // update sf flag
-            buffer.push(0x24); // global.set
-            buffer.push(registers.indexOf("sf"));
+            setSignFlag(buffer);
             
             break;
         }
@@ -543,72 +579,19 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             
             // set relevant flags based on result
             // PF - parity
-            // set if the number of bits set in result is even
-            buffer.push(0x23); // global.get
-            buffer.push(registers.indexOf("t1"));
-            buffer.push(0x69); // i32.popcnt
-            buffer.push(0x41); // i32.const
-            buffer.push(0x02);
-            buffer.push(0x70); // i32.rem_u
-            buffer.push(0x41); // i32.const
-            buffer.push(0x01);
-            buffer.push(0x73); // i32.xor
-            
-            // update pf flag
-            buffer.push(0x24); // global.set
-            buffer.push(registers.indexOf("pf")); 
+            setParityFlag(buffer); 
             
             // ZF - zero
-            // set if the result is zero
-            buffer.push(0x23); // global.get
-            buffer.push(registers.indexOf("t1"));
-            buffer.push(0x45); // i32.eqz
-            // update zf flag
-            buffer.push(0x24); // global.set
-            buffer.push(registers.indexOf("zf"));
+            setZeroFlag(buffer);
             
             // SF - sign
-            // set if the result is signed negative
-            buffer.push(0x23); // global.get
-            buffer.push(registers.indexOf("t1"));
-            buffer.push(0x41); // i32.const
-            buffer.push(0x00);
-            buffer.push(0x48); // i32.lt_s
-            // update sf flag
-            buffer.push(0x24); // global.set
-            buffer.push(registers.indexOf("sf"));
+            setSignFlag(buffer);
             
             // CF - carry
-            // set if op 2 is smaller than op 1
-            if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
-            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
-            buffer.push(0x49); // i32.lt_u
-            // update cf flag
-            buffer.push(0x24); // global.set
-            buffer.push(registers.indexOf("cf"));
+            setCarryFlag(buffer, instruction.operandSet[0], instruction.operandSet[1]);
             
             // OF - overflow
-            // set if sign bit of result does not match sign bit of op1
-            
-            // get sign bit of op1
-            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
-            buffer.push(0x41); // i32.const
-            putConstOnBuffer(buffer, 0x80000000);
-            buffer.push(0x71); // i32.and
-            
-            // get sign bit of result
-            buffer.push(0x23); // global.get
-            buffer.push(registers.indexOf("t1"));
-            buffer.push(0x41); // i32.const
-            putConstOnBuffer(buffer, 0x80000000);
-            buffer.push(0x71); // i32.and
-            
-            // xor to confirm sign bits are different
-            buffer.push(0x73); // i32.xor
-            
-             // update of flag
-            buffer.push(0x24); // global.set
-            buffer.push(registers.indexOf("of"));
+            setOverflowFlag(buffer, instruction.operandSet[0]);
             break;
         }
         case "ICALL": {
