@@ -96,6 +96,23 @@ function showMemory(source) {
   }
 }
 
+function showStack() {
+  let rowTop = source;
+  const bufferView = new Uint8Array(mem.buffer);
+  for (let i = 0; i < 8; i++) {
+    const rowBottom = Math.max(0, rowTop - 16;
+    
+    let row = "0x" + rowTop.toString(16).toUpperCase().padStart(8, '0') + ":  ";
+    for (let j = rowTop; j > rowBottom; j--) {
+      const db = bufferView[j - 1]; 
+      row = row + db.toString(16).toUpperCase().padStart(2, '0') + " ";
+    }
+    console.log(row);
+    
+    rowTop = rowBottom;
+  }
+}
+
 function debugHandler(chunkDetail, showAddr = true) {
   const instruction = chunkDetail.instructions[t2.value];
   const decoded = decodeInstruction(instruction);
@@ -122,7 +139,7 @@ function debugHandler(chunkDetail, showAddr = true) {
     } else if (command === "show sys") {
       showSystem();
     } else if (command === "show stack") {
-      inspectMemory("esp");
+      showStack();
     } else if (command === "show all") {
       console.log("\nRegisters");
       showRegisters();
@@ -132,7 +149,7 @@ function debugHandler(chunkDetail, showAddr = true) {
       showSystem();
       if (esp.value > 0) {
         console.log("\nStack");
-        inspectMemory("esp");
+        showStack();
       } 
     } else {
       console.log("Unrecognized command " + command);
