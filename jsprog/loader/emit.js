@@ -625,6 +625,38 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             setOverflowFlag(buffer, instruction.operandSet[0]);
             break;
         }
+        case "SUB": {
+            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
+            buffer.push(0x6B); // i32.sub
+            
+            // store temporarily in t1
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("t1"));
+            
+            // set relevant flags based on result
+            // PF - parity
+            setParityFlag(buffer); 
+            
+            // ZF - zero
+            setZeroFlag(buffer);
+            
+            // SF - sign
+            setSignFlag(buffer);
+            
+            // CF - carry
+            setCarryFlag(buffer, instruction.operandSet[0], instruction.operandSet[1]);
+            
+            // OF - overflow
+            setOverflowFlag(buffer, instruction.operandSet[0]);
+            
+            // restore to stack and store
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1")); 
+            
+            if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            break;
+        }
         case "NOT": {
             if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             buffer.push(0x41); // i32.const
@@ -634,6 +666,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             break;
         } 
+        
         case "SAL":
         case "SHL": {
             if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
