@@ -13,7 +13,7 @@ the cost is efficiency as a decent number of opcodes are spent setting up blocks
 there are options for microoptimizations. one already implemented is to place the branch to the first instruction first in the branch list.
 it might be possible to use br_table for this with some additional work.
 */
-const registers = ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi", "link", "cf", "pf", "zf", "sf", "of", "af", "t1", "t2"];
+const registers = ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi", "link", "cf", "pf", "zf", "sf", "of", "af", "t1", "t2", "t64"];
 
 const segments = ["es", "cs", "ss", "ds", "fs", "gs"];
 
@@ -921,6 +921,49 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             if (!stackToOperand(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
             break;
         }
+        case "IMUL": {
+            // handle possible 2-op form
+            if(instruction.operandSet.length === 2) instruction.operandSet.push(instruction.operandSet[0]);
+            
+            // push op2 and op3
+            // sign extended to determine OF and CF
+            if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
+            buffer.push(0xAC); // i32.extend_i32_s
+            if (!operandToStack(instruction.operandSet[2], instruction.prefixSet, buffer)) return false;
+            buffer.push(0xAC); // i32.extend_i32_s
+            
+            // multiply
+            buffer.push(0x7E); // i64.mul
+            
+            // store in t64
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("t64"));
+            
+            // if larger than 32-bit unsigned max, set OF and CF
+            buffer.push(0x23);
+            buffer.push(registers.indexOf("t64"));
+            buffer.push(0x42); // i64.const
+            putConstOnBuffer(buffer, 0xFFFFFFFF);
+            // compare
+            buffer.push(0x56); // i64.gt_u
+            
+            buffer.push(0xA7); // i32.wrap_i64
+            
+            // set CF and OF from the result
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("cf"));
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("cf"));
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("of"));
+            
+            // truncate result and store in dest
+            buffer.push(0x23); // global.get
+               buffer.push(registers.indexOf("t64"));
+            buffer.push(0xA7); // i32.wrap_i64
+            if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            break;
+        }
         case "ICALL": {
             await assembleInstruction({mnemonic: "PUSH", operandSet: [{type:'imm', val:instruction.next, size:32}]}, buffer, imports, targets, -1);
         }
@@ -1034,7 +1077,10 @@ async function assemble(chunk, debuggerEnabled) {
         for (const b of regImportName) tempImportBuffer.push(b);
         
         tempImportBuffer.push(0x03); // global import
-        tempImportBuffer.push(0x7F); // i32
+        if (register === "t64") 
+            tempImportBuffer.push(0x7E); // i64
+        else
+             tempImportBuffer.push(0x7F); // i32
         tempImportBuffer.push(0x01); // mut flag 
     }
     
