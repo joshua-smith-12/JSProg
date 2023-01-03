@@ -217,6 +217,10 @@ function runChunk(module, version, chunkId) {
       vcall: () => {
         console.log("Virtual call to 0x" + t1.value.toString(16).toUpperCase().padStart(8, '0'));
         debugHandler(chunkDetail);
+      },
+      interrupt: () => {
+        console.log("Interrupt called with index " + t1.value.toString(16).toUpperCase().padStart(2, '0'));
+        debugHandler(chunkDetail);
       }
     }
   };

@@ -712,6 +712,16 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             break;
         }
+        case "INT": {
+            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("t1"));
+            
+            // call import 4 for interrupt routine
+            buffer.push(0x10);
+            buffer.push(0x04);
+            break;
+        }
         case "ICALL": {
             await assembleInstruction({mnemonic: "PUSH", operandSet: [{type:'imm', val:instruction.next, size:32}]}, buffer, imports, targets, -1);
         }
@@ -791,6 +801,7 @@ async function assemble(chunk, debuggerEnabled) {
     importList.push("system::writeSegment");
     importList.push("system::debugger");
     importList.push("system::vcall");
+    importList.push("system::interrupt");
     for (const instruction of chunk.instructions) { 
         if ((instruction.mnemonic === "JMP" || instruction.mnemonic === "CALL" || conditionalJumpOps.includes(instruction.mnemonic)) && instruction.operandSet[0].type !== 'reg' && instruction.operandSet[1].val !== -1 && !importList.includes(`chunk${instruction.operandSet[1].val}::defaultExport`)) {
             importList.push(`chunk${instruction.operandSet[1].val}::defaultExport`);
