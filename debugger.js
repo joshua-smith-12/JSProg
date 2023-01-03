@@ -185,10 +185,31 @@ function decodeInstruction(instruction) {
       let res = instruction.mnemonic + " "; 
       for(const op of instruction.operandSet) {
         if (op.indirect) res += "[";
-        if (op.type === "imm") res += "0x" + (op.val >>> 0).toString(16).toUpperCase();
-        else if (op.type === "reg") res += ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"][op.val];
-        else console.log(op);
+        
+        if (op.type === "imm") {
+          res += "0x" + (op.val >>> 0).toString(16).toUpperCase(); 
+        } else if (op.type === "reg") {
+          res += ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"][op.val];
+        } else if (op.type === "moffs") {
+          if (instruction.prefixSet.includes(0x2E)) {
+            res += "cs:";
+          } else if (instruction.prefixSet.includes(0x36)) {
+            res += "ss:";
+          } else if (instruction.prefixSet.includes(0x3E)) {
+            res += "ds:";
+          } else if (instruction.prefixSet.includes(0x26)) {
+            res += "es:";
+          } else if (instruction.prefixSet.includes(0x64)) {
+            res += "fs:";
+          } else if (instruction.prefixSet.includes(0x65)) {
+            res += "gs:";
+          }
+          
+          res += "0x" + (op.val >>> 0).toString(16).toUpperCase();
+        } else console.log(op);
+        
         if (op.displace) res += parseInt(op.displace);
+        
         if (op.indirect) res += "]";
         res += ", ";
       }
