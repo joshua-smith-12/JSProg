@@ -114,7 +114,7 @@ function showStack() {
     const rowStart = stackBottom - 16 * (i + 1);
     
     let row = "0x" + rowStart.toString(16).toUpperCase().padStart(8, '0') + ":  ";
-    for (let j = 0; j < 8; j++) {
+    for (let j = 0; j < 16; j++) {
       const db = bufferView[rowStart + j]; 
       row = row + db.toString(16).toUpperCase().padStart(2, '0') + " ";
     }
