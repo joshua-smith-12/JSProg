@@ -568,8 +568,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             // get ZF
             buffer.push(0x23); // global.get
             buffer.push(registers.indexOf("zf"));
-            // test if zero and break if so
-            buffer.push(0x45); // i32.eqz
+            // breaks if ZF is set (skipping over JMP)
             buffer.push(0x0D); // br_if
             buffer.push(0x00);
             
@@ -588,11 +587,8 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             // get ZF
             buffer.push(0x23); // global.get
             buffer.push(registers.indexOf("zf"));
-            // test if zero, then invert result and break if so
+            // breaks if ZF is not set (skipping over JMP)
             buffer.push(0x45); // i32.eqz
-            buffer.push(0x41); // i32.const
-            buffer.push(0x01);
-            buffer.push(0x73); // i32.xor
             buffer.push(0x0D); // br_if
             buffer.push(0x00);
             
