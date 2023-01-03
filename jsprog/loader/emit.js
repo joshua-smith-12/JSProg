@@ -117,6 +117,9 @@ function operandToStack(operand, prefixes, buffer) {
         
         buffer.push(0x6A); // i32.add
         if (!sizedLoad(buffer, operand.size)) return false;
+    } else if (operand.type === 'seg') {
+        buffer.push(0x23);
+        buffer.push(registers.length + segments.indexOf(operand.val));
     } else {
         console.log("Unknown operand type to be placed on stack!");
         return false;
