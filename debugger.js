@@ -25,6 +25,7 @@ const gs = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const link = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const t1 = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const t2 = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
+const t64 = new WebAssembly.Global({ value: "i64", mutable: true }, 0);
   
 const cf = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const of_ = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
@@ -58,8 +59,8 @@ function showSegments() {
 }
 
 function showSystem() {
-  console.log("LINK       T1         T2");
-  console.log("0x" + link.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + t1.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + t2.value.toString(16).toUpperCase().padStart(8, '0'));
+  console.log("LINK       T1         T2         T64");
+  console.log("0x" + link.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + t1.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + t2.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + t64.value.toString(16).toUpperCase().padStart(16, '0'));
 }
 
 function inspectMemory(source) {
@@ -251,7 +252,7 @@ function runChunk(module, version, chunkId) {
   
   const importData = {
     js: { mem },
-    registers: { eax, ebx, ecx, edx, esi, edi, esp, ebp, link, t1, t2, cf, zf, sf, pf, af, of: of_ },
+    registers: { eax, ebx, ecx, edx, esi, edi, esp, ebp, link, t1, t2, t64, cf, zf, sf, pf, af, of: of_ },
     segments: { cs, ds, es, ss, fs: fs_, gs },
     system: {
       debugger: () => {
