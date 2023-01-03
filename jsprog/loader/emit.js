@@ -857,6 +857,30 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             await assembleInstruction({mnemonic: "PUSH", operandSet: [{type:'reg', val:registers.indexOf("t1"), size:32}]}, buffer, imports, targets, -1);
             break;
         }
+        case "CMPXCHG": { 
+            // perform a CMP between the first operand and EAX
+            await assembleInstruction({mnemonic: "CMP", operandSet: [instruction.operandSet[0], {type:'reg', val:registers.indexOf("eax"), size:instruction.operandSet[0].size}]}, buffer, imports, targets, -1);
+            // test ZF
+            buffer.push(0x23); // globals.get
+            buffer.push(registers.indexOf("zf"));
+            buffer.push(0x45); // i32.eqz
+            
+            // case if ZF is not set - load op1 into eax
+            buffer.push(0x04); // if
+            buffer.push(0x40);
+            
+            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            if (!stackToOperand({type:'reg', val:registers.indexOf("eax"), size:instruction.operandSet[0].size}, instruction.prefixSet, buffer)) return false;
+            
+            // case if ZF is set - load op2 into op1
+            buffer.push(0x05); // else
+            
+            if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
+            if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            
+            buffer.push(0x0B); // close block
+            break;
+        }
         case "ICALL": {
             await assembleInstruction({mnemonic: "PUSH", operandSet: [{type:'imm', val:instruction.next, size:32}]}, buffer, imports, targets, -1);
         }
