@@ -717,7 +717,6 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             break;
         } 
-        
         case "SAL":
         case "SHL": {
             if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
@@ -772,6 +771,90 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(0x10);
             buffer.push(0x02);
             break;
+        }
+        case "PUSHFD": {
+            // assemble EFLAGS register
+            // start with 0x00
+            buffer.push(0x41); // i32.const
+            buffer.push(0x00);
+            
+            // for each flag, read from register, compare to zero, and invert the result
+            
+            // CF flag
+            buffer.push(0x23);
+            buffer.push(registers.indexOf("cf"));
+            buffer.push(0x45); // i32.eqz
+            buffer.push(0x41); // i32.const
+            buffer.push(0x01);
+            buffer.push(0x73); // i32.xor 
+            buffer.push(0x72); // i32.or 
+            
+            // PF flag
+            buffer.push(0x23);
+            buffer.push(registers.indexOf("pf"));
+            buffer.push(0x45); // i32.eqz
+            buffer.push(0x41); // i32.const
+            buffer.push(0x01);
+            buffer.push(0x73); // i32.xor 
+            buffer.push(0x41); // i32.const
+            buffer.push(0x02);
+            buffer.push(0x74); // i32.shl 
+            buffer.push(0x72); // i32.or
+            
+            // AF flag
+            buffer.push(0x23);
+            buffer.push(registers.indexOf("af"));
+            buffer.push(0x45); // i32.eqz
+            buffer.push(0x41); // i32.const
+            buffer.push(0x01);
+            buffer.push(0x73); // i32.xor 
+            buffer.push(0x41); // i32.const
+            buffer.push(0x04);
+            buffer.push(0x74); // i32.shl 
+            buffer.push(0x72); // i32.or
+            
+            // ZF flag
+            buffer.push(0x23);
+            buffer.push(registers.indexOf("zf"));
+            buffer.push(0x45); // i32.eqz
+            buffer.push(0x41); // i32.const
+            buffer.push(0x01);
+            buffer.push(0x73); // i32.xor 
+            buffer.push(0x41); // i32.const
+            buffer.push(0x06);
+            buffer.push(0x74); // i32.shl 
+            buffer.push(0x72); // i32.or
+            
+            // SF flag
+            buffer.push(0x23);
+            buffer.push(registers.indexOf("sf"));
+            buffer.push(0x45); // i32.eqz
+            buffer.push(0x41); // i32.const
+            buffer.push(0x01);
+            buffer.push(0x73); // i32.xor 
+            buffer.push(0x41); // i32.const
+            buffer.push(0x07);
+            buffer.push(0x74); // i32.shl 
+            buffer.push(0x72); // i32.or
+            
+            // OF flag
+            buffer.push(0x23);
+            buffer.push(registers.indexOf("of"));
+            buffer.push(0x45); // i32.eqz
+            buffer.push(0x41); // i32.const
+            buffer.push(0x01);
+            buffer.push(0x73); // i32.xor 
+            buffer.push(0x41); // i32.const
+            buffer.push(0x0B);
+            buffer.push(0x74); // i32.shl 
+            buffer.push(0x72); // i32.or
+            
+            // move into t1
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("t1"));
+            
+            // put onto stack
+            await assembleInstruction({mnemonic: "PUSH", operandSet: [{type:'reg', val:registers.indexOf("t1"), size:32}]}, buffer, imports, targets, -1);
         }
         case "ICALL": {
             await assembleInstruction({mnemonic: "PUSH", operandSet: [{type:'imm', val:instruction.next, size:32}]}, buffer, imports, targets, -1);
