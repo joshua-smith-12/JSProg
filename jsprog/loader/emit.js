@@ -123,11 +123,7 @@ function operandToStack(operand, prefixes, buffer) {
     } else if (operand.type === 'sib') {
       // [base + index*scale + displace]
       // base and index should always be registers
-      // should always be indirect
-      if (!operand.indirect) {
-          console.log("Cannot apply SIB unless the operand is indirect.");
-          return false;
-      }
+      
       // get the base
       buffer.push(0x23); // global.get
       buffer.push(operand.base);
@@ -145,7 +141,10 @@ function operandToStack(operand, prefixes, buffer) {
       buffer.push(0x6C); // i32.mul
       buffer.push(0x6A); // i32.add
       
-      if (!sizedLoad(buffer, operand.size)) return false;
+      // this will only ever be non-indirect for LEA
+      if (operand.indirect) {
+            if (!sizedLoad(buffer, operand.size)) return false;
+      }
     } else {
         console.log("Unknown operand type to be placed on stack!");
         return false;
