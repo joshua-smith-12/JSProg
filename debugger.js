@@ -2,6 +2,8 @@ const fs = require('fs');
 const readline = require('readline-sync');
 const { conditionalJumpOps } = require('./jsprog/loader/utils.js');
 
+let stackInitial = 0;
+
 const mem = new WebAssembly.Memory({initial: 1});
 
 const eax = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
@@ -103,6 +105,23 @@ function showMemory(source) {
   }
 }
 
+function showStack() {
+  const stackTop = esp.value;
+  const stackBottom = Math.min(stackTop + 16 * 8, stackInitial);
+  const bufferView = new Uint8Array(mem.buffer);
+  
+  for (let i = 0; i < 8; i++) {
+    const rowStart = stackBottom - 16 * (i + 1);
+    
+    let row = "0x" + rowStart.toString(16).toUpperCase().padStart(8, '0') + ":  ";
+    for (let j = 0; j < 8; j++) {
+      const db = bufferView[rowStart + j]; 
+      row = row + db.toString(16).toUpperCase().padStart(2, '0') + " ";
+    }
+    console.log(row);
+  }
+}
+
 function debugHandler(chunkDetail, showAddr = true) {
   const instruction = chunkDetail.instructions[t2.value];
   const decoded = decodeInstruction(instruction);
@@ -129,7 +148,7 @@ function debugHandler(chunkDetail, showAddr = true) {
     } else if (command === "show sys") {
       showSystem();
     } else if (command === "show stack") {
-      inspectMemory("esp");
+      showStack();
     } else if (command === "show all") {
       console.log("\nRegisters");
       showRegisters();
@@ -139,7 +158,7 @@ function debugHandler(chunkDetail, showAddr = true) {
       showSystem();
       if (esp.value > 0) {
         console.log("\nStack");
-        inspectMemory("esp");
+        showStack();
       } 
     } else {
       console.log("Unrecognized command " + command);
@@ -259,6 +278,7 @@ async function doDebug() {
   
   // initialise stack
   esp.value = virtualBase - 4;
+  stackInitial = virtualBase - 4;
     
   runChunk(module, version, 0);
 }
