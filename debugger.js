@@ -53,7 +53,7 @@ function showSegments() {
   console.log("DS: " + ds.value.toString(16).toUpperCase().padStart(8, '0'));
   console.log("ES: " + es.value.toString(16).toUpperCase().padStart(8, '0'));
   console.log("SS: " + ss.value.toString(16).toUpperCase().padStart(8, '0'));
-  console.log("FS: " + fs.value.toString(16).toUpperCase().padStart(8, '0'));
+  console.log("FS: " + fs_.value.toString(16).toUpperCase().padStart(8, '0'));
   console.log("GS: " + gs.value.toString(16).toUpperCase().padStart(8, '0'));
 }
 
