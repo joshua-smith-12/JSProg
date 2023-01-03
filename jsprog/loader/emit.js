@@ -71,20 +71,21 @@ function operandToStack(operand, prefixes, buffer) {
             buffer.push(0x23); // global.get
             buffer.push(operand.val);
             
-            if (displacement && displacement > 0) {
+            if (displacement) {
                 buffer.push(0x41); // i32.const
                 putConstOnBuffer(buffer, displacement);
-                buffer.push(0x6A); // i32.add
-            } else if (displacement) {
-                displacement = displacement * -1;
-                buffer.push(0x41); // i32.const
-                putConstOnBuffer(buffer, displacement);
-                buffer.push(0x6B); // i32.sub
+                buffer.push(0x6B); // i32.add
             } 
             if (!sizedLoad(buffer, operand.size)) return false;
         } else {
             buffer.push(0x23); // global.get
             buffer.push(operand.val);
+            // technically illegal but used in sketchy LEA implementation
+            if (displacement) {
+                buffer.push(0x41); // i32.const
+                putConstOnBuffer(buffer, displacement);
+                buffer.push(0x6B); // i32.add
+            }
         }
     } else if (operand.type === 'moffs') {
         // check prefix count
