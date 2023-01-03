@@ -351,11 +351,6 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             break;
         }
         case "POP": {
-            // read from [ESP]
-            if (!operandToStack({type: "reg", val: registers.indexOf("esp"), size: 32, indirect: true}, instruction.prefixSet, buffer)) return false;
-            // pop into the desired operand
-            if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
-            
             // shift ESP based on the operand size
             buffer.push(0x23); // global.get
             buffer.push(registers.indexOf("esp"));
@@ -364,6 +359,10 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(0x6A); // i32.add
             buffer.push(0x24); // global.set
             buffer.push(registers.indexOf("esp"));
+            // read from [ESP]
+            if (!operandToStack({type: "reg", val: registers.indexOf("esp"), size: 32, indirect: true}, instruction.prefixSet, buffer)) return false;
+            // pop into the desired operand
+            if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
             break;
         }
         case "RET": {
