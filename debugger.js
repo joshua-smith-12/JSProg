@@ -25,7 +25,7 @@ const gs = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const link = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const t1 = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const t2 = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
-const t64 = new WebAssembly.Global({ value: "i64", mutable: true }, 0);
+const t64 = new WebAssembly.Global({ value: "i64", mutable: true }, 0n);
   
 const cf = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const of_ = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
