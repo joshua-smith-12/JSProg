@@ -49,12 +49,12 @@ function showFlags() {
 }
 
 function showSegments() {
-  console.log("CS: " + cs.value.toString(16).toUpperCase().padStart(8, '0'));
-  console.log("DS: " + ds.value.toString(16).toUpperCase().padStart(8, '0'));
-  console.log("ES: " + es.value.toString(16).toUpperCase().padStart(8, '0'));
-  console.log("SS: " + ss.value.toString(16).toUpperCase().padStart(8, '0'));
-  console.log("FS: " + fs_.value.toString(16).toUpperCase().padStart(8, '0'));
-  console.log("GS: " + gs.value.toString(16).toUpperCase().padStart(8, '0'));
+  console.log("CS: 0x" + cs.value.toString(16).toUpperCase().padStart(8, '0'));
+  console.log("DS: 0x" + ds.value.toString(16).toUpperCase().padStart(8, '0'));
+  console.log("ES: 0x" + es.value.toString(16).toUpperCase().padStart(8, '0'));
+  console.log("SS: 0x" + ss.value.toString(16).toUpperCase().padStart(8, '0'));
+  console.log("FS: 0x" + fs_.value.toString(16).toUpperCase().padStart(8, '0'));
+  console.log("GS: 0x" + gs.value.toString(16).toUpperCase().padStart(8, '0'));
 }
 
 function showSystem() {

@@ -86,29 +86,37 @@ function operandToStack(operand, prefixes, buffer) {
             }
         }
     } else if (operand.type === 'moffs') {
-        // check prefix count
-        if (prefixes.length === 0) {
-            operand.type = 'imm';
-            return operandToStack(operand, prefixes, buffer);
+        // read segment based on prefix
+        if (prefixes.includes(0x26)) {
+            buffer.push(0x24);
+            buffer.push(registers.length + segments.indexOf("es"));
+        } else if (prefixes.includes(0x2E)) {
+            buffer.push(0x24);
+            buffer.push(registers.length + segments.indexOf("cs"));
+        } else if (prefixes.includes(0x36)) {
+            buffer.push(0x24);
+            buffer.push(registers.length + segments.indexOf("ss"));
+        } else if (prefixes.includes(0x3E)) {
+            buffer.push(0x24);
+            buffer.push(registers.length + segments.indexOf("ds"));
+        } else if (prefixes.includes(0x64)) {
+            buffer.push(0x24);
+            buffer.push(registers.length + segments.indexOf("fs"));
+        } else if (prefixes.includes(0x65)) {
+            buffer.push(0x24);
+            buffer.push(registers.length + segments.indexOf("gs"));
+        } else {
+            // no segment provided, simulate
+            buffer.push(0x41); // i32.const
+            buffer.push(0x00);
         }
-        // get the prefix and offset into t1 and t2
-        buffer.push(0x41); // i32.const
-        putConstOnBuffer(buffer, prefixes[0]);
-        buffer.push(0x24); // global.set
-        buffer.push(registers.indexOf("t1"));
         
+        // offset onto buffer
         buffer.push(0x41); // i32.const
         putConstOnBuffer(buffer, operand.val);
-        buffer.push(0x24); // global.set
-        buffer.push(registers.indexOf("t2"));
         
-        // call import 0 for os-provided function
-        buffer.push(0x10);
-        buffer.push(0x00);
-        
-        // return in t1
-        buffer.push(0x23); // global.get
-        buffer.push(registers.indexOf("t1"));
+        buffer.push(0x6A); // i32.add
+        if (!sizedLoad(buffer, operand.size)) return false;
     } else {
         console.log("Unknown operand type to be placed on stack!");
         return false;
@@ -166,26 +174,47 @@ function stackToOperand(operand, prefixes, buffer) {
             buffer.push(operand.val);
         }
     } else if (operand.type === 'moffs') {
-        // check prefix count
-        if (prefixes.length === 0) {
-            operand.type = 'imm';
-            return stackToOperand(operand, prefixes, buffer);
+        // read the value into temp register
+        buffer.push(0x24); // global.set
+      buffer.push(registers.indexOf("t1"));
+         
+        // read segment based on prefix
+        if (prefixes.includes(0x26)) {
+            buffer.push(0x24);
+            buffer.push(registers.length + segments.indexOf("es"));
+        } else if (prefixes.includes(0x2E)) {
+            buffer.push(0x24);
+            buffer.push(registers.length + segments.indexOf("cs"));
+        } else if (prefixes.includes(0x36)) {
+            buffer.push(0x24);
+            buffer.push(registers.length + segments.indexOf("ss"));
+        } else if (prefixes.includes(0x3E)) {
+            buffer.push(0x24);
+            buffer.push(registers.length + segments.indexOf("ds"));
+        } else if (prefixes.includes(0x64)) {
+            buffer.push(0x24);
+            buffer.push(registers.length + segments.indexOf("fs"));
+        } else if (prefixes.includes(0x65)) {
+            buffer.push(0x24);
+            buffer.push(registers.length + segments.indexOf("gs"));
+        } else {
+            // no segment provided, simulate
+            buffer.push(0x41); // i32.const
+            buffer.push(0x00);
         }
-        // get the prefix and offset into t1 and t2
+        
+        // offset
         buffer.push(0x41); // i32.const
-        putConstOnBuffer(buffer, prefixes[0]);
-        buffer.push(0x24); // global.set
+        putConstOnBuffer(buffer, operand.val);
+        
+        buffer.push(0x6A); // i32.add
+        
+        // restore value onto stack
+        buffer.push(0x23); // global.get
         buffer.push(registers.indexOf("t1"));
-        
-        // pop val off of stack into t2
-        buffer.push(0x24); // global.set
-        buffer.push(registers.indexOf("t2"));
-        
-        // call import 1 for os-provided function
-        buffer.push(0x10);
-        buffer.push(0x01);
-        
-        // result lands in t1
+            
+        // store
+        if (!sizedStore(buffer, operand.size)) return false;
     } else {
         console.log("Unknown operand type to be stored in operand!");
         return false;
@@ -736,9 +765,9 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(0x24); // global.set
             buffer.push(registers.indexOf("t1"));
             
-            // call import 4 for interrupt routine
+            // call import 2 for interrupt routine
             buffer.push(0x10);
-            buffer.push(0x04);
+            buffer.push(0x02);
             break;
         }
         case "ICALL": {
@@ -749,9 +778,9 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(0x24); // global.set
             buffer.push(registers.indexOf("t1"));
             
-            // call import 3 for virtual call
+            // call import 1 for virtual call
             buffer.push(0x10);
-            buffer.push(0x03);
+            buffer.push(0x01);
             break;
         }
         default: {
@@ -816,8 +845,6 @@ async function assemble(chunk, debuggerEnabled) {
     // section Import (0x02)
     // count the number of unique imports (each import is either EXTERN for a function import, or a JMP/CALL with a chunk ID other than -1)
     const importList = [];
-    importList.push("system::readSegment");
-    importList.push("system::writeSegment");
     importList.push("system::debugger");
     importList.push("system::vcall");
     importList.push("system::interrupt");
@@ -955,7 +982,7 @@ async function assemble(chunk, debuggerEnabled) {
             tempFuncBuffer.push(0x24); // global.set
             tempFuncBuffer.push(registers.indexOf("t2"));
             tempFuncBuffer.push(0x10); // call
-            tempFuncBuffer.push(0x02); // debugger index
+            tempFuncBuffer.push(0x00); // debugger index
         }
       
         // process the instruction
