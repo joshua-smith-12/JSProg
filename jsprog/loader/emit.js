@@ -362,7 +362,15 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             break;
         }
         case "RET": {
-            buffer.push(0x0F);
+            // shift ESP by 4
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("esp"));
+            buffer.push(0x41); // i32.const
+            putConstOnBuffer(buffer, 4);
+            buffer.push(0x6A); // i32.add
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("esp"));
+            buffer.push(0x0F); // return
             break;
         }
         case "ADD": {
