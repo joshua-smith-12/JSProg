@@ -881,6 +881,22 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(0x0B); // close block
             break;
         }
+        case "XCHG": {
+            // put op1 into t1
+            if (!operandToStack(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            buffer.push(0x24); // global.set
+            buffer.push(registers.indexOf("t1"));
+            
+            // put op2 into op1
+            if (!operandToStack(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
+            if (!stackToOperand(instruction.operandSet[0], instruction.prefixSet, buffer)) return false;
+            
+            // put t1 into op2
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("t1"));
+            if (!stackToOperand(instruction.operandSet[1], instruction.prefixSet, buffer)) return false;
+            break;
+        }
         case "ICALL": {
             await assembleInstruction({mnemonic: "PUSH", operandSet: [{type:'imm', val:instruction.next, size:32}]}, buffer, imports, targets, -1);
         }
