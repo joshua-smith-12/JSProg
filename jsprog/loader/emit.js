@@ -855,6 +855,7 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             
             // put onto stack
             await assembleInstruction({mnemonic: "PUSH", operandSet: [{type:'reg', val:registers.indexOf("t1"), size:32}]}, buffer, imports, targets, -1);
+            break;
         }
         case "ICALL": {
             await assembleInstruction({mnemonic: "PUSH", operandSet: [{type:'imm', val:instruction.next, size:32}]}, buffer, imports, targets, -1);
