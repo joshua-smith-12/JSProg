@@ -101,6 +101,7 @@ function showStack() {
   const bufferView = new Uint8Array(mem.buffer);
   for (let i = 0; i < 8; i++) {
     const rowBottom = Math.max(0, rowTop - 16);
+    if (rowTop === 0) break;
     
     let row = "0x" + rowTop.toString(16).toUpperCase().padStart(8, '0') + ":  ";
     for (let j = rowTop; j > rowBottom; j--) {
