@@ -94,17 +94,21 @@ function operandToStack(operand, prefixes, buffer) {
         // get the prefix and offset into t1 and t2
         buffer.push(0x41); // i32.const
         putConstOnBuffer(buffer, prefixes[0]);
-        buffer.push(0x23); // global.get
+        buffer.push(0x24); // global.set
         buffer.push(registers.indexOf("t1"));
         
         buffer.push(0x41); // i32.const
         putConstOnBuffer(buffer, operand.val);
-        buffer.push(0x23); // global.get
+        buffer.push(0x24); // global.set
         buffer.push(registers.indexOf("t2"));
         
         // call import 0 for os-provided function
         buffer.push(0x10);
         buffer.push(0x00);
+        
+        // return in t1
+        buffer.push(0x23); // global.get
+        buffer.push(registers.indexOf("t1"));
     } else {
         console.log("Unknown operand type to be placed on stack!");
         return false;
@@ -170,17 +174,18 @@ function stackToOperand(operand, prefixes, buffer) {
         // get the prefix and offset into t1 and t2
         buffer.push(0x41); // i32.const
         putConstOnBuffer(buffer, prefixes[0]);
-        buffer.push(0x23); // global.get
+        buffer.push(0x24); // global.set
         buffer.push(registers.indexOf("t1"));
         
-        buffer.push(0x41); // i32.const
-        putConstOnBuffer(buffer, operand.val);
-        buffer.push(0x23); // global.get
+        // pop val off of stack into t2
+        buffer.push(0x24); // global.set
         buffer.push(registers.indexOf("t2"));
         
         // call import 1 for os-provided function
         buffer.push(0x10);
         buffer.push(0x01);
+        
+        // result lands in t1
     } else {
         console.log("Unknown operand type to be stored in operand!");
         return false;
