@@ -918,6 +918,8 @@ async function assemble(chunk, debuggerEnabled) {
         let res = false;
         try {
             res = await assembleInstruction(instruction, tempFuncBuffer, importList, branchTargets, i);
+        } catch (error) {
+            console.log(error);
         } finally { 
             if (!res) {
                 console.log(JSON.stringify(instruction));
