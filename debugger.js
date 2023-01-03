@@ -247,8 +247,10 @@ function runChunk(module, version, chunkId) {
 }
 
 async function doDebug() {
-  const module = readline.question("What module should I run? ");
-  const version = readline.question("What is the version of the module? ");
+  //const module = readline.question("What module should I run? ");
+  //const version = readline.question("What is the version of the module? ");
+  
+  const module="hw2.exe",version="0.0";
   
   const info = JSON.parse(fs.readFileSync(`./chunks/${module}@${version}/program.json`));
   const mmap = fs.readFileSync(`./chunks/${module}@${version}/${info.mmap}`);
