@@ -48,6 +48,15 @@ function showFlags() {
   console.log("0x" + (cf.value !== 0 ? 1 : 0).toString(16).toUpperCase().padStart(2, '0') + " 0x" + (of_.value !== 0 ? 1 : 0).toString(16).toUpperCase().padStart(2, '0') + " 0x" + (sf.value !== 0 ? 1 : 0).toString(16).toUpperCase().padStart(2, '0') + " 0x" + (zf.value !== 0 ? 1 : 0).toString(16).toUpperCase().padStart(2, '0') + " 0x" + (pf.value !== 0 ? 1 : 0).toString(16).toUpperCase().padStart(2, '0') + " 0x" + (af.value !== 0 ? 1 : 0).toString(16).toUpperCase().padStart(2, '0'));
 }
 
+function showSegments() {
+  console.log("CS: " + cs.value.toString(16).toUpperCase().padStart(8, '0'));
+  console.log("DS: " + ds.value.toString(16).toUpperCase().padStart(8, '0'));
+  console.log("ES: " + es.value.toString(16).toUpperCase().padStart(8, '0'));
+  console.log("SS: " + ss.value.toString(16).toUpperCase().padStart(8, '0'));
+  console.log("FS: " + fs.value.toString(16).toUpperCase().padStart(8, '0'));
+  console.log("GS: " + gs.value.toString(16).toUpperCase().padStart(8, '0'));
+}
+
 function showSystem() {
   console.log("LINK       T1         T2");
   console.log("0x" + link.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + t1.value.toString(16).toUpperCase().padStart(8, '0') + " 0x" + t2.value.toString(16).toUpperCase().padStart(8, '0'));
@@ -149,17 +158,22 @@ function debugHandler(chunkDetail, showAddr = true) {
       showSystem();
     } else if (command === "show stack") {
       showStack();
+    } else if (command === "show seg") {
+      showSegments(); 
     } else if (command === "show all") {
       console.log("\nRegisters");
       showRegisters();
       console.log("\nFlags");
       showFlags();
+      console.log("\nSegments");
+      showSegments();
       console.log("\nSystem Variables");
       showSystem();
       if (esp.value > 0) {
         console.log("\nStack");
         showStack();
       } 
+      console.log("");
     } else {
       console.log("Unrecognized command " + command);
     }
@@ -299,8 +313,12 @@ async function doDebug() {
   memArray.set(mmap, virtualBase);
   
   // initialise stack
-  esp.value = virtualBase - 4;
-  stackInitial = virtualBase;
+  // stack receives everything from 0x00 to virtualBase - 2kb (2kb reserved for fs and gs segments)
+  esp.value = virtualBase -  2 * 1024 - 4;
+  stackInitial = virtualBase - 2 * 1024;
+  
+  fs_.value = virtualBase - 2 * 1024;
+  gs.value = virtualBase - 1 * 1024;
     
   runChunk(module, version, 0);
 }
