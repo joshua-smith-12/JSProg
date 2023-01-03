@@ -88,22 +88,22 @@ function operandToStack(operand, prefixes, buffer) {
     } else if (operand.type === 'moffs') {
         // read segment based on prefix
         if (prefixes.includes(0x26)) {
-            buffer.push(0x24);
+            buffer.push(0x23);
             buffer.push(registers.length + segments.indexOf("es"));
         } else if (prefixes.includes(0x2E)) {
-            buffer.push(0x24);
+            buffer.push(0x23);
             buffer.push(registers.length + segments.indexOf("cs"));
         } else if (prefixes.includes(0x36)) {
-            buffer.push(0x24);
+            buffer.push(0x23);
             buffer.push(registers.length + segments.indexOf("ss"));
         } else if (prefixes.includes(0x3E)) {
-            buffer.push(0x24);
+            buffer.push(0x23);
             buffer.push(registers.length + segments.indexOf("ds"));
         } else if (prefixes.includes(0x64)) {
-            buffer.push(0x24);
+            buffer.push(0x23);
             buffer.push(registers.length + segments.indexOf("fs"));
         } else if (prefixes.includes(0x65)) {
-            buffer.push(0x24);
+            buffer.push(0x23);
             buffer.push(registers.length + segments.indexOf("gs"));
         } else {
             // no segment provided, simulate
@@ -180,22 +180,22 @@ function stackToOperand(operand, prefixes, buffer) {
          
         // read segment based on prefix
         if (prefixes.includes(0x26)) {
-            buffer.push(0x24);
+            buffer.push(0x23);
             buffer.push(registers.length + segments.indexOf("es"));
         } else if (prefixes.includes(0x2E)) {
-            buffer.push(0x24);
+            buffer.push(0x23);
             buffer.push(registers.length + segments.indexOf("cs"));
         } else if (prefixes.includes(0x36)) {
-            buffer.push(0x24);
+            buffer.push(0x23);
             buffer.push(registers.length + segments.indexOf("ss"));
         } else if (prefixes.includes(0x3E)) {
-            buffer.push(0x24);
+            buffer.push(0x23);
             buffer.push(registers.length + segments.indexOf("ds"));
         } else if (prefixes.includes(0x64)) {
-            buffer.push(0x24);
+            buffer.push(0x23);
             buffer.push(registers.length + segments.indexOf("fs"));
         } else if (prefixes.includes(0x65)) {
-            buffer.push(0x24);
+            buffer.push(0x23);
             buffer.push(registers.length + segments.indexOf("gs"));
         } else {
             // no segment provided, simulate
