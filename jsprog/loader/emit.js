@@ -147,6 +147,12 @@ function stackToOperand(operand, prefixes, buffer) {
             buffer.push(0x23); // global.get
             buffer.push(operand.val);
             
+            if (displacement) {
+                buffer.push(0x41); // i32.const
+                putConstOnBuffer(buffer, displacement);
+                buffer.push(0x6B); // i32.add
+            } 
+            
             // restore value onto stack
             buffer.push(0x23); // global.get
             buffer.push(registers.indexOf("t1"));
