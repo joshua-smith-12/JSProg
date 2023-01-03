@@ -15,6 +15,8 @@ it might be possible to use br_table for this with some additional work.
 */
 const registers = ["eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi", "link", "cf", "pf", "zf", "sf", "of", "af", "t1", "t2"];
 
+const segments = ["es", "cs", "ss", "ds", "fs", "gs"];
+
 function sizedLoad(buffer, size) {
     if (size === 32) {
         buffer.push(0x28); // i32.load
@@ -813,7 +815,7 @@ async function assemble(chunk, debuggerEnabled) {
     chunkBuffer.push(0x02);
     const tempImportBuffer = [];
     
-    tempImportBuffer.push(importList.length + 1 + registers.length); // import count +1 for Memory, +x for registers
+    tempImportBuffer.push(importList.length + 1 + registers.length + segments.length); // import count +1 for Memory, +x for registers, +y fof segments
     
     // memory import
     const memModuleName = Buffer.from("js");
@@ -835,6 +837,20 @@ async function assemble(chunk, debuggerEnabled) {
         const regImportName = Buffer.from(register);
         tempImportBuffer.push(regImportName.length); // length
         for (const b of regImportName) tempImportBuffer.push(b);
+        
+        tempImportBuffer.push(0x03); // global import
+        tempImportBuffer.push(0x7F); // i32
+        tempImportBuffer.push(0x01); // mut flag 
+    }
+    
+    const segModuleName = Buffer.from("segments");
+    for (const segment of segments) {
+        tempImportBuffer.push(segModuleName.length); // length
+        for (const b of segModuleName) tempImportBuffer.push(b);
+        
+        const segImportName = Buffer.from(segment);
+        tempImportBuffer.push(segImportName.length); // length
+        for (const b of segImportName) tempImportBuffer.push(b);
         
         tempImportBuffer.push(0x03); // global import
         tempImportBuffer.push(0x7F); // i32

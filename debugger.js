@@ -12,6 +12,13 @@ const esi = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const edi = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const esp = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const ebp = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
+
+const cs = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
+const ds = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
+const es = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
+const ss = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
+const fs = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
+const gs = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
   
 const link = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const t1 = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
@@ -208,6 +215,7 @@ function runChunk(module, version, chunkId) {
   const importData = {
     js: { mem },
     registers: { eax, ebx, ecx, edx, esi, edi, esp, ebp, link, t1, t2, cf, zf, sf, pf, af, of: of_ },
+    segments: { cs, ds, es, ss, fs, gs },
     system: {
       readSegment: () => { return; }, 
       writeSegment: () => { return; },
