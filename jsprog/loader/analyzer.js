@@ -2485,7 +2485,7 @@ const ProcessOpcode = (opcode, opChangeSize, buf, addr) => {
 		const { mod, reg, rm } = ReadModRM(buf, addr++);
 		bytesRead += 1;
 
-		const processed = ApplyModRM(buf, addr, mod, rm, 8);
+		const processed = ApplyModRM(buf, addr, mod, rm, opChangeSize ? 16 : 32);
 		operandSet.push(...processed.operands);
 		bytesRead += processed.bytesRead;
 
