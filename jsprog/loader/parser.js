@@ -9,7 +9,7 @@ const {
 } = require('./structs.js');
 
 const { 
-    getNullTerminatedString 
+	getNullTerminatedString 
 } = require('./utils.js')
 
 const IMPORT_RVA_STATIC_IDX = 1;
