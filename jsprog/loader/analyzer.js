@@ -2485,7 +2485,7 @@ const ProcessOpcode = (opcode, opChangeSize, buf, addr) => {
 		const { mod, reg, rm } = ReadModRM(buf, addr++);
 		bytesRead += 1;
 
-		const processed = ApplyModRM(buf, addr, mod, rm, 8);
+		const processed = ApplyModRM(buf, addr, mod, rm, opChangeSize ? 16 : 32);
 		operandSet.push(...processed.operands);
 		bytesRead += processed.bytesRead;
 
@@ -2554,42 +2554,45 @@ const ProcessOpcode = (opcode, opChangeSize, buf, addr) => {
 	};
 };
 
-const ProcessChunk = async (buf, addr, chunkRanges, fixupAddress, importList) => {
-	const chunkName = `FUN_${(addr + fixupAddress).toString(16).padStart(8, '0').toUpperCase()}`;
+const ProcessChunk = async (buf, virtualAddress, dataPointer, chunkRanges, importList, sectionTables) => {
+	const chunkName = `FUN_${virtualAddress.toString(16).padStart(8, '0').toUpperCase()}`;
 	const chunkData = [];
 	const outstandingChunks = [];
 	const conditionalJumpTargets = [];
 	const externalChunks = [];
-	const addrStart = addr;
+	
+	const chunkAddress = virtualAddress;
+	const chunkDataStart = dataPointer;
 	while (true) {
-		const instrStart = addr;
+		const instructionAddress = chunkAddress + (dataPointer - chunkDataStart);
+		const instructionDataStart = dataPointer;
 		// read first byte of new instruction
-		let currByte = buf.readUInt8(addr++);
+		let currByte = buf.readUInt8(dataPointer++);
 		// read prefix bytes into a set
 		const prefixSet = [];
 		// check each byte for prefix, then goto next byte
 		while (prefixOps.includes(currByte)) {
 			prefixSet.push(currByte);
-			currByte = buf.readUInt8(addr++);
+			currByte = buf.readUInt8(dataPointer++);
 		}
 		
 		// determine the opcode, 2-bytes if extended
 		let opcodeBytes = currByte;
 		if (currByte === OPCODE_EXTENSION) {
-			opcodeBytes = buf.readUInt16BE(addr++ - 1);
+			opcodeBytes = buf.readUInt16BE(dataPointer++ - 1);
 		}
 		
 		// operation size prefix test
 		const opChangeSize = prefixSet.includes(0x66);
 		
 		// begin processing for this opcode
-		const { operandSet, operandName, bytesRead } = ProcessOpcode(opcodeBytes, opChangeSize, buf, addr);
-		addr += bytesRead;
+		const { operandSet, operandName, bytesRead } = ProcessOpcode(opcodeBytes, opChangeSize, buf, dataPointer);
+		dataPointer += bytesRead;
 		
 		// error case - unrecognized opcode
 		if (operandName === "") {
 			console.log(JSON.stringify(chunkData, null, 2));
-			console.log(`Error while processing function ${chunkName} at instruction 0x${(instrStart + fixupAddress).toString(16).toUpperCase()} - invalid opcode 0x${opcodeBytes.toString(16).toUpperCase()}`);
+			console.log(`Error while processing function ${chunkName} at instruction 0x${instructionAddress.toString(16).toUpperCase()} - invalid opcode 0x${opcodeBytes.toString(16).toUpperCase()}`);
 			return {
 				chunkName,
 				chunkRanges,
@@ -2599,30 +2602,28 @@ const ProcessChunk = async (buf, addr, chunkRanges, fixupAddress, importList) =>
 			};
 		}
 		
-		const instr = Instruction(prefixSet, opcodeBytes, operandSet, instrStart, addr, operandName)
+		const nextInstructionAddress = instructionAddress + (dataPointer - instructionDataStart);
+		const instr = Instruction(prefixSet, opcodeBytes, operandSet, instructionAddress, nextInstructionAddress, operandName);
 		
 		// handle CALL as an additional chunk to explore
 		// CALL processing also fixes up some calls to EXTERNS as needed
 		if (operandName === "CALL") {
-			const callTarget = addr + operandSet[0].val;
-			if (!chunkRanges.some(x => x.chunkRangeStart <= callTarget && x.chunkRangeEnd >= callTarget) && operandSet[0].type !== "reg") 
-			if (operandSet[0].indirect) {
-				// indirect chunks will generally be labels, and may be external to the primary code section
-				const importDLL = importList.find(x => x.allImports.some(y => y.addr === operandSet[0].val));
-				if (importDLL) {
-					const importName = importDLL.allImports.find(y => y.addr === operandSet[0].val);
-					instr.operandSet = [
-									{
-										type: 'extern',
-										val: `${importDLL.name}::${importName.name}`
-									}
-								];
-					instr.operandName = "EXTERN";	
+			let callTarget = nextInstructionAddress + operandSet[0].val;
+			if (!chunkRanges.some(x => x.chunkRangeStart <= callTarget && x.chunkRangeEnd >= callTarget) && operandSet[0].type !== "reg") {
+				if (operandSet[0].indirect) {
+					const target = operandSet[0].val;
+					// determine the data pointer for the target
+					const targetSection = sectionTables.find(x => x.addrStart <= target && x.addrEnd >= target);
+					const targetDataPointer = targetSection.dataPointer + (target - targetSection.addrStart);
+					const targetVirtualAddress = buf.readInt32LE(targetDataPointer);
+					if (!importList.some(x => x.allImports.some(y => y.thunk === targetVirtualAddress))) {
+						outstandingChunks.push(targetVirtualAddress);
+						operandSet[0].indirect = false;
+						operandSet[0].val = targetVirtualAddress - nextInstructionAddress;
+					}
 				} else {
-					externalChunks.push(operandSet[0].val);
-				}	
-			} else {
-				outstandingChunks.push(callTarget);
+					outstandingChunks.push(callTarget);
+				}
 			}	
 		}
 		
@@ -2633,17 +2634,18 @@ const ProcessChunk = async (buf, addr, chunkRanges, fixupAddress, importList) =>
 		if (operandName === "JMP" || operandName === "RET") {
 			// store the range of this chunk's data
 			chunkRanges.push({
-				chunkRangeStart: addrStart,
-				chunkRangeEnd: addr
+				chunkRangeStart: chunkAddress,
+				chunkRangeEnd: chunkAddress + (dataPointer - chunkDataStart)
 			});
 			// evaluate each conditional JMP, if not already included in the current chunk range.
 			for (var jmp of conditionalJumpTargets) {
 				// upper end is > and not >= as often, the subchunk will be right on the edge of the existing chunks.
-				if (chunkRanges.some(x => x.chunkRangeStart <= jmp && x.chunkRangeEnd > jmp)) {
-					continue;
-				} else {
+				if (!chunkRanges.some(x => x.chunkRangeStart <= jmp && x.chunkRangeEnd > jmp)) {
 					// process the subchunk
-					const subChunk = await ProcessChunk(buf, jmp, chunkRanges, fixupAddress, importList);
+					const jmpSection = sectionTables.find(y => y.addrStart <= jmp && y.addrEnd >= jmp);
+					if (!jmpSection) return {error: true};
+					
+					const subChunk = await ProcessChunk(buf, jmp, jmpSection.dataPointer + (jmp - jmpSection.addrStart), chunkRanges, importList, sectionTables);
 					if (subChunk.error) return subChunk;
 					// include new outstanding chunks
 					for (var x of subChunk.outstandingChunks) {
@@ -2654,7 +2656,7 @@ const ProcessChunk = async (buf, addr, chunkRanges, fixupAddress, importList) =>
 			}
 			// for unconditional jump only - set the jump target as a new chunk target, if not included in evaluated ranges.
 			if (operandName === "JMP") {
-				const jmpTarget = addr + operandSet[0].val;
+				const jmpTarget = nextInstructionAddress + operandSet[0].val;
 				if (!chunkRanges.some(x => x.chunkRangeStart <= jmpTarget && x.chunkRangeEnd >= jmpTarget) && !operandSet[0].indirect && operandSet[0].type !== 'reg') outstandingChunks.push(jmpTarget);
 			}
 			// quit
@@ -2663,7 +2665,7 @@ const ProcessChunk = async (buf, addr, chunkRanges, fixupAddress, importList) =>
 
 		// handle conditional JMPs as new locations in the current chunk
 		if (conditionalJumpOps.includes(operandName)) {
-			const jumpTarget = addr + operandSet[0].val;
+			const jumpTarget = nextInstructionAddress + operandSet[0].val;
 			if (!chunkRanges.some(x => x.chunkRangeStart <= jumpTarget && x.chunkRangeEnd >= jumpTarget)) conditionalJumpTargets.push(jumpTarget);
 		}
 	}
@@ -2678,16 +2680,21 @@ const ProcessChunk = async (buf, addr, chunkRanges, fixupAddress, importList) =>
 
 module.exports = {
 	
-	ProcessAllChunks: async function(buf, entrypoint, formalEntryPoint, importList) {
+	ProcessAllChunks: async function(buf, sectionTables, header, importList) {
 		const newChunks = [], chunkRanges = [], allChunks = [], externalChunks = [];
-		const fixupAddress = formalEntryPoint - entrypoint;
 		
-		let addr = entrypoint;
+		let virtualAddress = header.formalEntryPoint;
 		while (true) {
+			const chunkSection = sectionTables.find(x => x.addrStart <= virtualAddress && x.addrEnd >= virtualAddress);
+			const chunkOffset = virtualAddress - chunkSection.addrStart;
+			const imageOffset = chunkOffset + chunkSection.dataPointer;
+			
+			//console.log(`Processing chunk at section offset 0x${chunkOffset.toString(16).toUpperCase()}, image offset 0x${imageOffset.toString(16).toUpperCase()}, virtual address 0x${virtualAddress.toString(16).toUpperCase()}`);
+		
 			// check if this chunk was already processed at some point
-			if (!chunkRanges.some(x => x.chunkRangeStart <= addr && x.chunkRangeEnd > addr)) {
+			if (!chunkRanges.some(x => x.chunkRangeStart <= virtualAddress && x.chunkRangeEnd > virtualAddress)) {
 				// process the chunk
-				const currChunk = await ProcessChunk(buf, addr, [], fixupAddress, importList);
+				const currChunk = await ProcessChunk(buf, virtualAddress, imageOffset, [], importList, sectionTables);
 				if (currChunk.error) return;
 				// register the chunks still to be explored
 				for (var x of currChunk.outstandingChunks) {
@@ -2704,8 +2711,6 @@ module.exports = {
 				// store the current chunk
 				const chunkFinal = Chunk(currChunk.chunkName, currChunk.chunkData, currChunk.chunkRanges, []);
 				allChunks.push(chunkFinal);
-				
-				console.log(`Processed new chunk ${currChunk.chunkName}`);
 			}
 			
 			// check if chunk processing is complete
@@ -2714,20 +2719,18 @@ module.exports = {
 				break;
 			}
 			// progress to the new chunk
-			addr = newChunks.shift();
+			virtualAddress = newChunks.shift();
 		}
-		
-		console.log(externalChunks);
 
 		return allChunks;
 	},
 
-	FixupChunkReferences: async function(chunks, thunkFixup, thunkMax, importList, buf) {
+	FixupChunkReferences: async function(chunks, sectionTables, importList, buf) {
 		// iterate all chunks in order to fixup references to addresses
 		// (in e.g. JMP, CALL, etc...)
 		// this also generates a list of branch targets per chunk
-		for (var chunk of chunks) {	
-			for (var instruction of chunk.instructions) {
+		for (const chunk of chunks) {	
+			for (const instruction of chunk.instructions) {
 				// instructions to fixup
 				if (instruction.mnemonic === "JMP" || instruction.mnemonic === "CALL" || conditionalJumpOps.includes(instruction.mnemonic)) {
 					const operand = instruction.operandSet[0];
@@ -2736,15 +2739,19 @@ module.exports = {
 						// immediate indirect operand implies this is a function call
 						// indirects do not get offset from the instruction, they are absolute
 						// these need to be fixup'd as function calls.
-						const target = operand.val - thunkFixup;
-
-						// if target is outside of the thunk range, it's likely to be sourced from another section
-						// (e.g. .00cfg section contains a couple far pointers)
-						// these will just be skipped for now.
+						const target = operand.val;
+						// determine the data pointer for the target
+						const targetSection = 	sectionTables.find(x => x.addrStart <= target && x.addrEnd >= target);
+						const targetDataPointer = targetSection.dataPointer + (target - targetSection.addrStart);
 
 						// need to determine the function being thunk'd
-						if (target < thunkMax) {
-							const thunked = buf.readInt32LE(target);
+						// if the thunk points to a chunk (a virtual address) then we point to the chunk
+						// else we point to an extern call
+						const thunked = buf.readInt32LE(targetDataPointer);
+						if (chunks.some(x => x.addrStart <= thunked && x.addrEnd >= thunked)) {
+							console.log("Uncaught thunk pointing to virtual address inside section: " + thunked);
+							continue;
+						} else {
 							const importDLL = importList.find(x => x.allImports.some(y => y.thunk === thunked));
 							const importName = importDLL.allImports.find(y => y.thunk === thunked);
 							if (!importName) {
@@ -2767,9 +2774,9 @@ module.exports = {
 						// these are all offset from the next instruction
 						const target = operand.val + instruction.next;
 						// if the current chunk contains this target, we can drop early and stay within the current chunk
-						if (chunk.instructions.some(x => x.address === target)) {
+						if (chunk.instructions.some(x => x.virtualAddress === target)) {
 							// find the instruction number
-							const instructionTarget = chunk.instructions.findIndex(x => x.address === target);
+							const instructionTarget = chunk.instructions.findIndex(x => x.virtualAddress === target);
 							// set the chunk ID to -1 to indicate to remain in the current chunk
 							// update operands
 							// operands for JMP/CALL are:
@@ -2798,15 +2805,17 @@ module.exports = {
 							// identify the chunk containing this target
 							const targetChunk = chunks.filter(x => x.ranges.some(y => y.chunkRangeStart <= target && y.chunkRangeEnd > target));
 							if (targetChunk.length === 0) {
-								console.log(`No chunk exists to satisfy relocation to 0x${(target + fixup).toString(16).toUpperCase()}`);
-								return;
+								console.log(chunk.name);
+								console.log(instruction);
+								console.log(`No chunk exists to satisfy relocation to 0x${target.toString(16).toUpperCase()}`);
+									return;
 							}
 
 							// it's possible for targetChunk to match more than one chunk (if chunks have distinct starts, but overlapping contents).
 							// this is generally fine, because the jmp will try to remain within the same chunk if possible, and will only depart if needed.
 							const targetChunkID = chunks.findIndex(x => x.name === targetChunk[0].name);
-							if (targetChunk[0].instructions.some(x => x.address === target)) {
-								const instructionTarget = targetChunk[0].instructions.findIndex(x => x.address === target);
+							if (targetChunk[0].instructions.some(x => x.virtualAddress === target)) {
+								const instructionTarget = targetChunk[0].instructions.findIndex(x => x.virtualAddress === target);
 								// update operands
 								// operands for JMP/CALL are:
 								// - module ID
@@ -2831,15 +2840,16 @@ module.exports = {
 								];
 								if (!targetChunk[0].branchTargets.includes(instructionTarget)) targetChunk[0].branchTargets.push(instructionTarget);
 							} else {
-								console.log(`No instruction exists in chosen chunk to satisfy relocation to 0x${(target + fixup).toString(16).toUpperCase()}`);
+								console.log(`No instruction exists in chosen chunk to satisfy relocation to 0x${target.toString(16).toUpperCase()}`);
 								return;
 							}
 						}
-						
+					} else {
+						// indicate an indeterminate result (needs to be computed at runtime)
+						instruction.mnemonic = "I" + instruction.mnemonic;
 					}
 				}
 			}
 		}
 	}
-	
 };

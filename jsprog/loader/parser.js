@@ -1,4 +1,5 @@
 const analysis = require('./analyzer.js');
+const reloc = require('./relocate.js');
 const {
 	DataDirectory,
 	SectionHeader,
@@ -105,12 +106,18 @@ async function tryParseHeader(fileBuffer) {
 	};
 }
 
-async function tryParseTables (fileBuffer, header) {
-	const rvaTableBase = header.optionalHeaderBase + 0x60;
-	const rvaTables = [];
+async function tryParseTables (fileBuffer, header, preferredBase) {
+	const dataTableBase = header.optionalHeaderBase + 0x60;
+	
+	const dataTables = [];
 	for (let i = 0; i < header.rvaCount; i++) {
-		const currDirectory = DataDirectory(fileBuffer.readUInt32LE(rvaTableBase + i * 0x08 + 0x00), fileBuffer.readUInt32LE(rvaTableBase + i * 0x08 + 0x04));
-		rvaTables.push(currDirectory);
+		const currDirectory = DataDirectory(
+			fileBuffer.readUInt32LE(dataTableBase + i * 0x08 + 0x00),
+			fileBuffer.readUInt32LE(dataTableBase + i * 0x08 + 0x04),
+			fileBuffer.readUInt32LE(dataTableBase + i * 0x08 + 0x00) + preferredBase,
+			fileBuffer.readUInt32LE(dataTableBase + i * 0x08 + 0x00) + fileBuffer.readUInt32LE(dataTableBase + i * 0x08 + 0x04) + preferredBase,
+		);
+		dataTables.push(currDirectory);
 	}
 
 	const sectionTableBase = header.optionalHeaderBase + header.peHeader.optionalHeaderSize;
@@ -118,13 +125,11 @@ async function tryParseTables (fileBuffer, header) {
 	for (let i = 0; i < header.sectionCount; i++) {
 		const currSection = SectionHeader(
 			fileBuffer.toString('utf8', sectionTableBase + i*0x28 + 0x00, sectionTableBase + i*0x28 + 0x08), 
-			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x08), 
-			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x0C), 
-			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x10), 
+			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x0C),
 			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x14), 
-			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x18), 
-			fileBuffer.readUInt16LE(sectionTableBase + i*0x28 + 0x20), 
-			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x24)
+			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x24),
+			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x0C) + preferredBase,
+			fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x0C) + fileBuffer.readUInt32LE(sectionTableBase + i*0x28 + 0x08) + preferredBase
 		);
 		
 		const sectionNameEnd = currSection.name.indexOf('\0') === -1 ? currSection.name.length : currSection.name.indexOf('\0');
@@ -132,124 +137,144 @@ async function tryParseTables (fileBuffer, header) {
 		sectionTables.push(currSection);
 	}
 	
-	console.log(`Successfully read ${rvaTables.length} RVA tables and ${sectionTables.length} sections from image`);
+	console.log(`Successfully read ${dataTables.length} data tables and ${sectionTables.length} sections from image`);
 	
-	return { rvaTables, sectionTables };
+	return { dataTables, sectionTables };
 }
 
-async function findImports(fileBuffer, rvaTables, sectionTables, preferredBase) {
-	// identify the import section (commonly .idata, but not always)
-	const importRva = rvaTables[IMPORT_RVA_STATIC_IDX];
-	let importSection = null;
-	for (var section of sectionTables) {
-		if (section.virtualAddress <= importRva.virtualAddress && (section.virtualAddress + section.virtualSize) >= importRva.virtualAddress)
-			importSection = section;
+async function findImports(fileBuffer, dataTables, sectionTables, preferredBase) {
+	// identify the data pointer for the import data table
+	const importData = dataTables[IMPORT_RVA_STATIC_IDX];
+	const importSection = sectionTables.find(x => x.addrStart <= importData.addrStart && x.addrEnd >= importData.addrEnd);
+	if (!importSection) {
+		console.log("Failed to find import data, no section was found containing the import data table.");
+		return false;
 	}
 	
-	// base address in loaded image
-	const importBaseAddress = importSection.virtualAddress + preferredBase;
+	const importDataOffset = importData.relativeVirtualAddress - importSection.relativeVirtualAddress;
 	
-	// import directory table exists at the offset of the import RVA inside the import section
-	const importDirectoryTable = importSection.dataPointer + (importRva.virtualAddress - importSection.virtualAddress);
-	console.log(`Import directory table found at ${importSection.name}, image offset 0x${importDirectoryTable.toString(16).toUpperCase()}`);	
+	// find the real file offset of the import directory table
+	const importTablePointer = importSection.dataPointer + importDataOffset;
+	console.log(`Import directory table found at ${importSection.name}, image offset 0x${importTablePointer.toString(16).toUpperCase()}`);	
 	
 	const importTable = [];
-	let currentImportNumber = 0;
+	let importIndex = 0;
 	while (true) {
-		const importLookupRVA = fileBuffer.readUInt32LE(importDirectoryTable + currentImportNumber*0x14 + 0x00);
-		const importNameRVA = fileBuffer.readUInt32LE(importDirectoryTable + currentImportNumber*0x14 + 0x0C);
-		const importThunkRVA = fileBuffer.readUInt32LE(importDirectoryTable + currentImportNumber*0x14 + 0x10);
+		const importLookupTableAddr = fileBuffer.readUInt32LE(importTablePointer + importIndex*0x14 + 0x00);
+		const importNameStringAddr = fileBuffer.readUInt32LE(importTablePointer + importIndex*0x14 + 0x0C);	
+		const importThunkTableAddr = fileBuffer.readUInt32LE(importTablePointer + importIndex*0x14 + 0x10);
 		
 		// null entries means we reached the end of the import directory table
-		if (importLookupRVA === 0x00 && importNameRVA === 0x00 && importThunkRVA === 0x00) break;
+		if (importLookupTableAddr === 0x00 && importNameStringAddr === 0x00 && importThunkTableAddr === 0x00) break;
 		
-		const importLookupPointer = importSection.dataPointer + (importLookupRVA - importSection.virtualAddress);
-		const importNamePointer = importSection.dataPointer + (importNameRVA - importSection.virtualAddress);
-		const importThunkPointer = importSection.dataPointer + (importThunkRVA - importSection.virtualAddress);
+		const importLookupTablePtr = importSection.dataPointer + (importLookupTableAddr - importSection.relativeVirtualAddress);
+		const importNameStringPtr = importSection.dataPointer + (importNameStringAddr - importSection.relativeVirtualAddress);
+		const importThunkTablePtr = importSection.dataPointer + (importThunkTableAddr - importSection.relativeVirtualAddress);
 		
-		const importName = getNullTerminatedString(fileBuffer, importNamePointer);
+		const importName = getNullTerminatedString(fileBuffer, importNameStringPtr);
 		
 		console.log(`Processing directory entry for import ${importName}`);
-		const currImport = ImportDirectory(importName, importLookupPointer, importThunkPointer);
+		const currImport = ImportDirectory(importName, importLookupTablePtr, importThunkTablePtr);
 		importTable.push(currImport);
 		
-		// goto next import
-		currentImportNumber += 0x01;
+		importIndex = importIndex + 1;
 	}
 	
 	// process the import hints in each imported DLL
 	// we don't care about thunks in this case since the calls will get patched over anyway during processing
 	const importList = [];
-	for (var importData of importTable) {
+	for (const importDll of importTable) {
 		const currImportList = [];
-		const importLookupPointer = importData.lookupPointer;
-		const importThunkPointer = importData.thunkPointer;
-		const importSectionOffset = importData.thunkPointer - importSection.dataPointer;
-		let currentLookupNumber = 0;
+		const importLookupPointer = importDll.lookupPointer;
+		const importThunkPointer = importDll.thunkPointer;
+		
+		let lookupIndex = 0;
 		while (true) {
-			const currLookup = fileBuffer.readUInt32LE(importLookupPointer + currentLookupNumber*0x04);
-			const currThunk = fileBuffer.readUInt32LE(importThunkPointer + currentLookupNumber*0x04);
+			const currLookup = fileBuffer.readUInt32LE(importLookupPointer + lookupIndex*0x04);
 			if (currLookup === 0x00) break;
-			const virtualImportAddr = importBaseAddress + importSectionOffset + currentLookupNumber * 0x04;
+			
+			const importOffset = (importThunkPointer + lookupIndex * 0x04) - importSection.dataPointer;
+			const importVirtualAddress = importOffset + importSection.addrStart;
 			
 			// ordinal vs. hint lookup
 			const isOrdinal = (currLookup & 0x80000000) !== 0;
 			if (isOrdinal) {
 				const lookupNumber = currLookup & 0xFFFF;
-				const currImport = ImportHint(lookupNumber, null, currThunk, virtualImportAddr);
+				const currImport = ImportHint(lookupNumber, null, currLookup, importVirtualAddress);
 				currImportList.push(currImport);
 			} else {
-				const hintVRA = currLookup & ~0x80000000;
-				const hintPointer = importSection.dataPointer + (hintVRA - importSection.virtualAddress);
+				const hintRVA = currLookup & ~0x80000000;
+				const hintPointer = importSection.dataPointer + (hintRVA - importSection.relativeVirtualAddress);
 				// read the hint ID and name
 				const hintID = fileBuffer.readUInt16LE(hintPointer);
 				const hintName = getNullTerminatedString(fileBuffer, hintPointer + 0x02);
-				const currImport = ImportHint(hintID, hintName, currThunk, virtualImportAddr);
+				const currImport = ImportHint(hintID, hintName, currLookup, importVirtualAddress);
 				currImportList.push(currImport);
 			}
-			currentLookupNumber += 0x01;
+			lookupIndex += 0x01;
 		}
-		const currImportTable = DllImportDefinition(importData.name, currImportList)
+		const currImportTable = DllImportDefinition(importDll.name, currImportList)
 		importList.push(currImportTable);
 	}
 	
 	return { importTable, importList, importSection };
 }
 
-async function tryParsePE(fileBuffer) {
+async function tryParsePE(fileBuffer, virtualBase = 64 * 1024) {
 	const header = await tryParseHeader(fileBuffer);
 	if (!header) return false;
+	header.formalEntryPoint = header.formalEntryPoint - header.optionalHeader.imagePreferredBase + virtualBase;
 	
-	const tables = await tryParseTables(fileBuffer, header);
+	const tables = await tryParseTables(fileBuffer, header, virtualBase);
 	if (!tables) return false;
-	const { rvaTables, sectionTables } = tables;
+	const { dataTables, sectionTables } = tables;
 	
-	const imports = await findImports(fileBuffer, rvaTables, sectionTables, header.optionalHeader.imagePreferredBase);
+	const imports = await findImports(fileBuffer, dataTables, sectionTables, virtualBase);
 	if (!imports) return false;
 	const { importTable, importList, importSection } = imports;
 	
 	// TODO: confirm existence of the indicated DLLs with the required imports, or prompt to provide them if needed
 	
-	// find the section containing the entry point
-	let codeSection = null;
-	for (var section of sectionTables) {
-		if (section.virtualAddress <= header.optionalHeader.imageEntryPoint && (section.virtualAddress + section.virtualSize) >= header.optionalHeader.imageEntryPoint)
-			codeSection = section;
+	// apply address relocations	
+	await reloc.ApplyRelocations(sectionTables, fileBuffer, header, virtualBase);
+	
+	// launch code analysis
+	const codeChunkSet = await analysis.ProcessAllChunks(fileBuffer, sectionTables, header, importList);
+	if (!codeChunkSet) return false;
+	
+	await analysis.FixupChunkReferences(codeChunkSet, sectionTables, importList, fileBuffer);
+	
+	return { header, tables, imports, codeChunkSet, virtualBase };
+}
+
+async function createMemoryMap(fileBuffer, tables, virtualBase) {
+	// iterate sections once to find memory map size
+	let mapSize = 0;
+	for (const section of tables.sectionTables) {
+		const dataPointer = section.dataPointer;
+		const addrStart = section.addrStart - virtualBase;
+		const size = section.addrEnd - section.addrStart;
+		mapSize = Math.max(mapSize, addrStart + size);
 	}
 	
-	const codeEntryOffset = codeSection.dataPointer + (header.optionalHeader.imageEntryPoint - codeSection.virtualAddress);
-	console.log(`Identified image entry point at ${codeSection.name}, image offset 0x${codeEntryOffset.toString(16).toUpperCase()}`);
+	console.log("Creating memory map with size " + mapSize);
+	const memoryMap = Buffer.alloc(mapSize);
 	
-	// launch code analysis starting from the entrypoint
-	const codeChunkSet = await analysis.ProcessAllChunks(fileBuffer, codeEntryOffset, header.formalEntryPoint, importList);
-	if (!codeChunkSet) return false;
-	// fixup references in JMP/CALL
-	const thunkBase = (header.optionalHeader.imagePreferredBase + importSection.virtualAddress) - importSection.dataPointer;
-	const codeChunkFixup = await analysis.FixupChunkReferences(codeChunkSet, thunkBase, importSection.dataPointer + importSection.dataSize, importList, fileBuffer);
+	for (const section of tables.sectionTables) {
+		const dataPointer = section.dataPointer;
+		const addrStart = section.addrStart - virtualBase;
+		const size = section.addrEnd - section.addrStart;
+		console.log("Memory mapping data from image offset " + dataPointer + " to range (" + addrStart + ", " + (addrStart + size) + ")");
+		
+		for(let i = 0; i < size; i++) {
+			memoryMap[addrStart + i] = fileBuffer[dataPointer + i];
+		}
+	}
 	
-	return { header, tables, imports, codeChunkSet, codeEntryOffset };
+	return memoryMap;
 }
 
 module.exports = {
-	tryParsePE
+	tryParsePE,
+	createMemoryMap
 };
