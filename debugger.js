@@ -254,8 +254,6 @@ function runChunk(module, version, chunkId) {
     registers: { eax, ebx, ecx, edx, esi, edi, esp, ebp, link, t1, t2, cf, zf, sf, pf, af, of: of_ },
     segments: { cs, ds, es, ss, fs: fs_, gs },
     system: {
-      readSegment: () => { return; }, 
-      writeSegment: () => { return; },
       debugger: () => {
         debugHandler(chunkDetail);
       },
