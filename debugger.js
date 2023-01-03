@@ -97,7 +97,7 @@ function showMemory(source) {
 }
 
 function showStack() {
-  let rowTop = source;
+  let rowTop = esp.value;
   const bufferView = new Uint8Array(mem.buffer);
   for (let i = 0; i < 8; i++) {
     const rowBottom = Math.max(0, rowTop - 16);
