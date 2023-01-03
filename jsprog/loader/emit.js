@@ -630,6 +630,30 @@ async function assembleInstruction(instruction, buffer, imports, targets, instrI
             buffer.push(0x0B); // close block
             break;
         }
+        case "JA": {
+            // create a block
+            buffer.push(0x02); 
+            buffer.push(0x40);
+            // get ZF
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("zf"));
+            // get CF
+            buffer.push(0x23); // global.get
+            buffer.push(registers.indexOf("cf"));
+            // take OR
+            buffer.push(0x72); // i32.or
+            
+            // breaks if either flag is set (skipping JMP)
+            buffer.push(0x0D); // br_if
+            buffer.push(0x00);
+            
+            // value is zero, perform regular JUMP
+            instruction.mnemonic = "JMP";
+            await assembleInstruction(instruction, buffer, imports, targets, instrIndex);
+            
+            buffer.push(0x0B); // close block
+            break;
+        }
         case "JE":
         case "JZ": {
             // create a block
