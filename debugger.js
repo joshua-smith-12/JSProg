@@ -278,7 +278,7 @@ async function doDebug() {
   
   // initialise stack
   esp.value = virtualBase - 4;
-  stackInitial = virtualBase - 4;
+  stackInitial = virtualBase;
     
   runChunk(module, version, 0);
 }
