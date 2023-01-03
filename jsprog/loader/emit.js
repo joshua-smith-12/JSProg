@@ -72,7 +72,7 @@ function operandToStack(operand, prefixes, buffer) {
             if (operand.displace) {
                 buffer.push(0x41); // i32.const
                 putConstOnBuffer(buffer, operand.displace);
-                buffer.push(0x6B); // i32.add
+                buffer.push(0x6A); // i32.add
             } 
             if (!sizedLoad(buffer, operand.size)) return false;
         } else {
@@ -82,7 +82,7 @@ function operandToStack(operand, prefixes, buffer) {
             if (operand.displace) {
                 buffer.push(0x41); // i32.const
                 putConstOnBuffer(buffer, operand.displace);
-                buffer.push(0x6B); // i32.add
+                buffer.push(0x6A); // i32.add
             }
         }
     } else if (operand.type === 'moffs') {
@@ -148,7 +148,7 @@ function stackToOperand(operand, prefixes, buffer) {
             if (operand.displace) {
                 buffer.push(0x41); // i32.const
                 putConstOnBuffer(buffer, operand.displace);
-                buffer.push(0x6B); // i32.add
+                buffer.push(0x6A); // i32.add
             } 
             
             // restore value onto stack
