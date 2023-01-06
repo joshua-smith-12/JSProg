@@ -6,7 +6,7 @@ const {
 	sizedLoad,
 	operandToStack,
 	stackToOperand
-} = require('../loader/asmtools.js');
+} = require('../loader/wasmtools.js');
 const {
 	conditionalJumpOps
 } = require('../utils.js');	

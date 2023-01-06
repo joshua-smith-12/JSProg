@@ -5,8 +5,9 @@ const {
 	putConstOnBuffer,
 	putConstOnStack,
 	stackToOperand,
-	operandToStack
-} = require('./asmtools.js');
+	operandToStack,
+	wasmFunctionToText
+} = require('./wasmtools.js');
 
 // puts a constant value into the target register.
 function setTargetRegister(assembler, buffer, target) {
@@ -589,6 +590,12 @@ async function buildWasm(assembler, chunk, debuggerEnabled) {
 	
 	// close function body
 	tempFuncBuffer.push(0x0B); // end
+
+	let wasmText = null;
+	if (debuggerEnabled) {
+		wasmText = wasmFunctionToText(tempFuncBuffer);
+		if (!wasmText) return false;
+	}
 	
 	// fix up the function size
 	putConstOnBuffer(tempCodeBuffer, tempFuncBuffer.length);
@@ -598,7 +605,7 @@ async function buildWasm(assembler, chunk, debuggerEnabled) {
 	putConstOnBuffer(chunkBuffer, tempCodeBuffer.length);
 	for (const b of tempCodeBuffer) chunkBuffer.push(b);
 	
-	return chunkBuffer;
+	return { wasmBytes: chunkBuffer, wasmText };
 }
 
 class Assembler {

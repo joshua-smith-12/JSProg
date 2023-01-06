@@ -42,12 +42,13 @@ async function processor(file) {
 	let chunkIndex = 0;
 	for (const chunk of codeChunkSet) {
 		await fs.writeFile(`./chunks/${file}@${imageMajorVersion}.${imageMinorVersion}/chunks.${chunkIndex}.json`, JSON.stringify(chunk, null, 4));
-		const wasmBytes = await assembler.AssembleChunk(chunk, true);
+		const { wasmBytes, wasmText } = await assembler.AssembleChunk(chunk, true);
 		if (!wasmBytes) {
 			console.log(`Chunk assembly failed at chunk ${chunkIndex}.`);
 			return false;
 		}
 		await fs.writeFile(`./chunks/${file}@${imageMajorVersion}.${imageMinorVersion}/chunks.${chunkIndex}.wasm`, Buffer.from(wasmBytes), 'binary');
+		if (wasmText) await fs.writeFile(`./chunks/${file}@${imageMajorVersion}.${imageMinorVersion}/chunks.${chunkIndex}.txt`, wasmText);
 		chunkIndex = chunkIndex + 1;
 	}
 }
