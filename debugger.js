@@ -1,6 +1,6 @@
 const fs = require('fs');
 const readline = require('readline-sync');
-const { conditionalJumpOps } = require('./jsprog/loader/utils.js');
+const { conditionalJumpOps } = require('./jsprog/utils.js');
 
 let stackInitial = 0;
 
@@ -22,7 +22,7 @@ const ss = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const fs_ = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const gs = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
   
-const link = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
+const target = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const t1 = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const t2 = new WebAssembly.Global({ value: "i32", mutable: true }, 0);
 const t64 = new WebAssembly.Global({ value: "i64", mutable: true }, 0n);
@@ -252,7 +252,7 @@ function runChunk(module, version, chunkId) {
   
   const importData = {
     js: { mem },
-    registers: { eax, ebx, ecx, edx, esi, edi, esp, ebp, link, t1, t2, t64, cf, zf, sf, pf, af, of: of_ },
+    registers: { eax, ebx, ecx, edx, esi, edi, esp, ebp, target, t1, t2, t64, cf, zf, sf, pf, af, of: of_ },
     segments: { cs, ds, es, ss, fs: fs_, gs },
     system: {
       debugger: () => {

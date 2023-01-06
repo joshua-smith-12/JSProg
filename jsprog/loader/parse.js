@@ -1,4 +1,3 @@
-const analysis = require('./analyzer.js');
 const reloc = require('./relocate.js');
 const {
 	DataDirectory,
@@ -10,7 +9,7 @@ const {
 
 const { 
 	getNullTerminatedString 
-} = require('./utils.js')
+} = require('../utils.js')
 
 const IMPORT_RVA_STATIC_IDX = 1;
 
@@ -231,20 +230,13 @@ async function tryParsePE(fileBuffer, virtualBase = 64 * 1024) {
 	
 	const imports = await findImports(fileBuffer, dataTables, sectionTables, virtualBase);
 	if (!imports) return false;
-	const { importTable, importList, importSection } = imports;
 	
 	// TODO: confirm existence of the indicated DLLs with the required imports, or prompt to provide them if needed
 	
 	// apply address relocations	
 	await reloc.ApplyRelocations(sectionTables, fileBuffer, header, virtualBase);
 	
-	// launch code analysis
-	const codeChunkSet = await analysis.ProcessAllChunks(fileBuffer, sectionTables, header, importList);
-	if (!codeChunkSet) return false;
-	
-	await analysis.FixupChunkReferences(codeChunkSet, sectionTables, importList, fileBuffer);
-	
-	return { header, tables, imports, codeChunkSet, virtualBase };
+	return { header, tables, imports, virtualBase };
 }
 
 async function createMemoryMap(fileBuffer, tables, virtualBase) {
