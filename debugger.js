@@ -5,14 +5,20 @@ const x86 = require('./jsprog/architectures/x86.js');
 const { conditionalJumpOps } = require('./jsprog/utils.js');
 
 let defaultCommand = null, moduleName = "", moduleVersion = "", stackInitial = 0;
+let arch = x86;
 
 function showRegisters(runtime) {
-	for (const register of x86.registers) {
-		console.log(`${register.name.toUpperCase().padStart(3, ' ')}: 0x${runtime.imports.registers[register.name].value.toString(16).toUpperCase().padStart(8, '0')}`);
+	const padding = arch.registers.reduce((acc, curr) => Math.max(acc, curr.name.length), 0);
+	for (const register of arch.registers) {
+		console.log(`${register.name.toUpperCase().padStart(padding, ' ')}: 0x${runtime.imports.registers[register.name].value.toString(16).toUpperCase().padStart(8, '0')}`);
 	}
 }
 
 function showSegments(runtime) {
+	const padding = arch.segments.reduce((acc, curr) => Math.max(acc, curr.name.length), 0);
+	for (const segment of arch.segments) {
+		console.log(`${segment.name.toUpperCase().padStart(padding, ' ')}: 0x${runtime.imports.segments[segment.name].value.toString(16).toUpperCase().padStart(8, '0')}`);
+	}
 }
 
 function showSystem(runtime) {
@@ -74,7 +80,7 @@ function decodeInstruction(runtime, instruction) {
 			if (op.type === "imm") {
 				res += "0x" + (op.val >>> 0).toString(16).toUpperCase(); 
 			} else if (op.type === "reg") {
-				res += x86.registers[op.val].name;
+				res += arch.registers[op.val].name;
 			} else {
 				console.log(op);
 			}
@@ -165,7 +171,7 @@ async function doDebug() {
 	const mmap = fs.readFileSync(`./chunks/${moduleName}@${moduleVersion}/${info.mmap}`);
 	const virtualBase = info.virtualBase;
 
-	const runtime = lightweight.getRuntime(virtualBase, mmap, x86.registers, x86.segments);
+	const runtime = lightweight.getRuntime(virtualBase, mmap, arch.registers, arch.segments);
 
 	stackInitial = virtualBase - 2 * 1024;
 	lightweight.setRegister(runtime, "esp", virtualBase -  2 * 1024 - 4);
